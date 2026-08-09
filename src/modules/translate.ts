@@ -7,7 +7,7 @@ import { formatText, FormatOptions } from "../utils/format";
 import { chunkText } from "../utils/chunker";
 import { detectLanguage } from "../utils/lang";
 import { getPref } from "../utils/prefs";
-import { getChannels, translateWithFallback } from "../services";
+import { getChannels } from "../services";
 import { errorMessage, isAbortError } from "../services/base";
 import { addHistory, findCache, hashSource } from "./history";
 
@@ -60,14 +60,28 @@ export class TranslateManager {
   readonly queue = new TaskQueue<TranslateJobMeta>((job, signal) =>
     this.process(job, signal),
   );
-  /** 事件总线（UI 订阅） */
-  onEvent?: (ev: TranslationEvent) => void;
+  /** 事件总线（多订阅者；UI 区块可各自订阅） */
+  private listeners = new Set<(ev: TranslationEvent) => void>();
+
+  addEventListener(fn: (ev: TranslationEvent) => void): void {
+    this.listeners.add(fn);
+  }
+
+  removeEventListener(fn: (ev: TranslationEvent) => void): void {
+    this.listeners.delete(fn);
+  }
 
   /** 最近一次划选文本（reader 弹层事件写入） */
   selectedText = "";
 
   private emit(ev: TranslationEvent) {
-    this.onEvent?.(ev);
+    for (const fn of this.listeners) {
+      try {
+        fn(ev);
+      } catch (e) {
+        ztoolkit.log("translate event handler error", e);
+      }
+    }
   }
 
   formatOptions(): FormatOptions {
@@ -157,7 +171,11 @@ export class TranslateManager {
         if (isAbortError(e)) {
           this.emit({ type: "cancelled", taskId: meta.taskId });
         } else {
-          this.emit({ type: "fail", taskId: meta.taskId, error: errorMessage(e) });
+          this.emit({
+            type: "fail",
+            taskId: meta.taskId,
+            error: errorMessage(e),
+          });
         }
       });
   }
@@ -182,6 +200,9 @@ export class TranslateManager {
     const detected = detectLanguage(job.formattedText);
     const srcLang = job.sourceLang === "auto" ? detected : job.sourceLang;
 
+    const contextAware = getPref("translate.contextAware");
+    const context = contextAware ? job.request.context : undefined;
+
     const errors: string[] = [];
     let engine = "";
     let translated = "";
@@ -190,6 +211,8 @@ export class TranslateManager {
     // 渠道级回退：整任务重试下一渠道（避免混用引擎输出）
     for (const ch of channels) {
       if (signal.aborted) throw new DOMException("aborted", "AbortError");
+      // 重置流式缓冲（避免回退后残留上一渠道的增量）
+      this.emit({ type: "processing", taskId: job.taskId });
       const parts: string[] = [];
       let chunkOk = true;
       for (let i = 0; i < job.chunks.length; i++) {
@@ -199,7 +222,7 @@ export class TranslateManager {
             {
               id: job.taskId,
               sourceText: job.chunks[i],
-              context: job.request.context,
+              context,
               sourceLang: srcLang,
               targetLang: job.targetLang,
               signal,
@@ -225,19 +248,22 @@ export class TranslateManager {
       throw new Error(errors.join("; ") || "没有可用的翻译渠道");
     }
 
-    // 入历史
+    // 入历史（sourceHash = 格式化后文本的 hash，与缓存查询键一致）
     let historyId: number | undefined;
     try {
-      historyId = await addHistory({
-        itemID: job.request.itemID ?? null,
-        sourceText: job.request.sourceText,
-        formattedText: job.formattedText,
-        translatedText: translated,
-        summary: null,
-        sourceLang: srcLang,
-        targetLang: job.targetLang,
-        engine,
-      });
+      historyId = await addHistory(
+        {
+          itemID: job.request.itemID ?? null,
+          sourceText: job.request.sourceText,
+          formattedText: job.formattedText,
+          translatedText: translated,
+          summary: null,
+          sourceLang: srcLang,
+          targetLang: job.targetLang,
+          engine,
+        },
+        hashSource(job.formattedText),
+      );
     } catch (e) {
       ztoolkit.log("save history failed", e);
     }

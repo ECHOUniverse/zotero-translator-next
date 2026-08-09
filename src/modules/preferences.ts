@@ -24,7 +24,9 @@ function bindPromptTextareas(win: Window): void {
       `#zotero-prefpane-${config.addonRef}-textarea-${key.replace(".", "-")}`,
     ) as HTMLTextAreaElement | null;
     if (!ta) continue;
-    ta.value = String(Zotero.Prefs.get(`${config.prefsPrefix}.${key}`, true) ?? "");
+    ta.value = String(
+      Zotero.Prefs.get(`${config.prefsPrefix}.${key}`, true) ?? "",
+    );
     ta.addEventListener("change", () => {
       Zotero.Prefs.set(`${config.prefsPrefix}.${key}`, ta.value, true);
     });
@@ -61,12 +63,18 @@ function bindCustomChannels(win: Window): void {
       for (const c of parsed) {
         if (!c || typeof c !== "object") throw new Error("非法条目");
         if (!c.id || !c.name || !c.baseURL || !c.apiKey || !c.model)
-          throw new Error(`渠道 ${c.id ?? "(未命名)"} 缺少字段（id/name/baseURL/apiKey/model）`);
-        if (!/^[\w-]+$/.test(String(c.id))) throw new Error(`id 只能含字母数字-：${c.id}`);
+          throw new Error(
+            `渠道 ${c.id ?? "(未命名)"} 缺少字段（id/name/baseURL/apiKey/model）`,
+          );
+        if (!/^[\w-]+$/.test(String(c.id)))
+          throw new Error(`id 只能含字母数字-：${c.id}`);
       }
       setPrefJSON("customChannels", parsed);
       new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
-        .createLine({ text: getString("prefs-channels-saved"), type: "success" })
+        .createLine({
+          text: getString("prefs-channels-saved"),
+          type: "success",
+        })
         .show();
     } catch (e) {
       new ztoolkit.ProgressWindow(config.addonName, { closeTime: 5000 })
@@ -84,7 +92,10 @@ function bindChannelsOrder(win: Window): void {
     `#zotero-prefpane-${config.addonRef}-channels-order`,
   ) as HTMLInputElement | null;
   if (!input) return;
-  input.value = getPrefJSON<string[]>("channelsOrder", ["bing", "deepseek"]).join(",");
+  input.value = getPrefJSON<string[]>("channelsOrder", [
+    "bing",
+    "deepseek",
+  ]).join(",");
   input.addEventListener("change", () => {
     const order = input.value
       .split(",")

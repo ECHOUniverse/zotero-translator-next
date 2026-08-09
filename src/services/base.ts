@@ -41,7 +41,10 @@ export async function fetchWithTimeout(
   timeoutMs: number,
 ): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error("timeout")), timeoutMs);
+  const timer = setTimeout(
+    () => controller.abort(new Error("timeout")),
+    timeoutMs,
+  );
   const external = init.signal;
   const onAbort = () => controller.abort();
   external?.addEventListener("abort", onAbort);

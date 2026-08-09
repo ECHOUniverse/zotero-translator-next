@@ -2,10 +2,12 @@
  * 阅读器模块：侧栏区块（ItemPaneManager.registerSection）+ 划选弹层 + 自动翻译
  */
 import { config } from "../../package.json";
-import { getLocaleID } from "../utils/locale";
-import { getPref } from "../utils/prefs";
+import { getLocaleID, getString } from "../utils/locale";
+import { getPref, getPrefJSON, setPref, setPrefJSON } from "../utils/prefs";
+import { getChannels } from "../services";
 import { TranslateManager } from "./translate";
 import {
+  el,
   buildSectionSkeleton,
   renderResultCard,
   renderHistoryList,
@@ -20,6 +22,16 @@ import { summarize } from "./summary";
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 const READER_PANE_ID = "translator-reader";
+
+/** 目标语言快捷切换选项 */
+const TARGET_LANGS: Array<[string, string]> = [
+  ["zh-CN", "中文"],
+  ["en", "English"],
+  ["ja", "日本語"],
+  ["ko", "한국어"],
+  ["de", "Deutsch"],
+  ["fr", "Français"],
+];
 const READER_SECTION_ID = "zotero-translator-next-reader-section";
 
 export class ReaderModule {
@@ -93,7 +105,7 @@ export class ReaderModule {
           }
           const btn = doc.createElementNS(XHTML_NS, "button");
           btn.className = "ztr-popup-btn";
-          btn.textContent = "翻译";
+          btn.textContent = getString("btn-translate");
           btn.addEventListener("click", () => {
             void this.translateSelection();
           });
@@ -113,8 +125,47 @@ export class ReaderModule {
     // bodyXHTML 已提供根元素；骨架在 onRender 中挂载
   }
 
+  /** 构建工具栏（渠道/目标语言快捷切换 = 侧栏简版设置） */
+  private buildToolbar(doc: Document, toolbar: HTMLElement): void {
+    toolbar.textContent = "";
+    const sel = el(doc, "select", {
+      class: "ztr-select",
+      "data-act": "channel",
+    });
+    for (const ch of getChannels()) {
+      const opt = doc.createElement("option");
+      opt.value = ch.id;
+      opt.textContent = ch.name;
+      sel.append(opt);
+    }
+    sel.addEventListener("change", () => {
+      // 简版设置：切换时写入当前使用的渠道顺序（将选中渠道置顶）
+      const order = getPrefJSON<string[]>("channelsOrder", [
+        "bing",
+        "deepseek",
+      ]);
+      const next = [sel.value, ...order.filter((x) => x !== sel.value)];
+      setPrefJSON("channelsOrder", next);
+    });
+    const langSel = el(doc, "select", {
+      class: "ztr-select",
+      "data-act": "lang",
+    });
+    for (const [code, label] of TARGET_LANGS) {
+      const opt = doc.createElement("option");
+      opt.value = code;
+      opt.textContent = label;
+      langSel.append(opt);
+    }
+    langSel.value = getPref("targetLang");
+    langSel.addEventListener("change", () =>
+      setPref("targetLang", langSel.value),
+    );
+    toolbar.append(sel, langSel);
+  }
+
   private wireEvents(): void {
-    this.translateMgr.onEvent = (ev) => {
+    this.translateMgr.addEventListener((ev) => {
       if (ev.type === "chunk") {
         this.view.status = "processing";
         this.view.streaming += ev.delta ?? "";
@@ -156,7 +207,7 @@ export class ReaderModule {
         this.view.streaming = "";
         this.refreshView();
       }
-    };
+    });
   }
 
   private refreshSelectionButtons(doc: Document): void {
@@ -177,7 +228,7 @@ export class ReaderModule {
     const text = this.translateMgr.selectedText?.trim();
     if (!text) {
       new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
-        .createLine({ text: "请先在 PDF 中选中文本", type: "error" })
+        .createLine({ text: getString("no-selection"), type: "error" })
         .show();
       return;
     }
@@ -197,7 +248,10 @@ export class ReaderModule {
   }
 
   private async refreshHistory(doc: Document): Promise<void> {
-    const records = await listHistory({ itemID: this.historyItemID ?? undefined, limit: 50 });
+    const records = await listHistory({
+      itemID: this.historyItemID ?? undefined,
+      limit: 50,
+    });
     this.history = records;
     if (this.skeleton) {
       renderHistoryList(doc, this.skeleton.historyCard, records, {
@@ -231,6 +285,36 @@ export class ReaderModule {
     }
   }
 
+  /** 保存总结到历史（按钮入口；无 historyId 时新建历史记录） */
+  private async saveSummary(): Promise<void> {
+    const text = this.summaryState.text;
+    if (!text) return;
+    try {
+      if (this.lastHistoryId != null) {
+        const { updateSummary } = await import("./history");
+        await updateSummary(this.lastHistoryId, text);
+      } else if (this.lastResultText) {
+        const { addHistory } = await import("./history");
+        await addHistory({
+          itemID: null,
+          sourceText: this.lastResultText,
+          formattedText: null,
+          translatedText: this.lastResultText,
+          summary: text,
+          sourceLang: "auto",
+          targetLang: getPref("targetLang"),
+          engine: "summary",
+        });
+      }
+      new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
+        .createLine({ text: getString("summary-saved"), type: "success" })
+        .show();
+      if (this.doc) void this.refreshHistory(this.doc);
+    } catch (e) {
+      ztoolkit.log("save summary failed", e);
+    }
+  }
+
   /** 总结最近一次译文（快捷键入口） */
   async summaryFromShortcut(): Promise<void> {
     if (!this.lastResultText) {
@@ -248,10 +332,16 @@ export class ReaderModule {
     this.summaryState = { status: "processing", text: "" };
     this.summaryAbort = new AbortController();
     if (this.skeleton) {
-      renderSummaryCard(this.skeleton.root.ownerDocument!, this.skeleton.summaryCard, this.summaryState, {
-        onClose: () => void 0,
-        onSave: () => void 0,
-      });
+      renderSummaryCard(
+        this.skeleton.root.ownerDocument!,
+        this.skeleton.summaryCard,
+        this.summaryState,
+        {
+          onClose: () => void 0,
+          onSave: () => void this.saveSummary(),
+          onRegenerate: () => void this.startSummary(),
+        },
+      );
     }
     try {
       const res = await summarize(
@@ -275,10 +365,16 @@ export class ReaderModule {
       };
     }
     if (this.skeleton) {
-      renderSummaryCard(this.skeleton.root.ownerDocument!, this.skeleton.summaryCard, this.summaryState, {
-        onClose: () => void 0,
-        onSave: () => void 0,
-      });
+      renderSummaryCard(
+        this.skeleton.root.ownerDocument!,
+        this.skeleton.summaryCard,
+        this.summaryState,
+        {
+          onClose: () => void 0,
+          onSave: () => void this.saveSummary(),
+          onRegenerate: () => void this.startSummary(),
+        },
+      );
       if (this.doc) void this.refreshHistory(this.doc);
     }
   }

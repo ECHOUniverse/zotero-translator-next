@@ -79,10 +79,17 @@ function rowToRecord(row: any): HistoryRecord {
   };
 }
 
-/** 新增历史记录，返回 id；插入后执行容量清理 */
-export async function addHistory(rec: NewHistoryRecord): Promise<number> {
+/** 新增历史记录，返回 id；插入后执行容量清理
+ * @param rec 记录字段
+ * @param sourceHashOverride 缓存键覆盖（默认 hash 原始文本；
+ *        翻译管线传入格式化后文本的 hash，保证与缓存查询键一致）
+ */
+export async function addHistory(
+  rec: NewHistoryRecord,
+  sourceHashOverride?: string,
+): Promise<number> {
   const createdAt = rec.createdAt ?? Date.now();
-  const sourceHash = hashSource(rec.sourceText);
+  const sourceHash = sourceHashOverride ?? hashSource(rec.sourceText);
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(
       `INSERT INTO ${TABLE}
@@ -105,9 +112,9 @@ export async function addHistory(rec: NewHistoryRecord): Promise<number> {
   });
   const max = getPref("historyCapacity");
   if (max > 0) await enforceCapacity(max);
+  // 事务内取最后插入 id（避免 createdAt 毫秒级碰撞）
   const row = (await Zotero.DB.rowQueryAsync(
-    `SELECT id FROM ${TABLE} WHERE createdAt = ? ORDER BY id DESC LIMIT 1`,
-    [createdAt],
+    `SELECT id FROM ${TABLE} ORDER BY id DESC LIMIT 1`,
   )) as { id: number } | false;
   return row ? Number(row.id) : -1;
 }
@@ -140,7 +147,9 @@ export interface ListOptions {
 }
 
 /** 历史列表（按时间倒序） */
-export async function listHistory(opts: ListOptions = {}): Promise<HistoryRecord[]> {
+export async function listHistory(
+  opts: ListOptions = {},
+): Promise<HistoryRecord[]> {
   const conds: string[] = [];
   const params: unknown[] = [];
   if (opts.itemID != null) {
@@ -167,7 +176,9 @@ export async function deleteHistory(id: number): Promise<void> {
 /** 按条目删除 */
 export async function deleteByItem(itemID: number): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
-    await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID = ?`, [itemID]);
+    await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID = ?`, [
+      itemID,
+    ]);
   });
 }
 
@@ -199,7 +210,10 @@ export async function enforceCapacity(max: number): Promise<number> {
 }
 
 /** 更新总结 */
-export async function updateSummary(id: number, summary: string): Promise<void> {
+export async function updateSummary(
+  id: number,
+  summary: string,
+): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(`UPDATE ${TABLE} SET summary = ? WHERE id = ?`, [
       summary,

@@ -10,38 +10,38 @@
 
 Zotero 文献翻译插件。与 zotero-pdf-translate 的差异化：
 
-| 差异化能力 | 说明 |
-|---|---|
+| 差异化能力           | 说明                                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
 | ① 规则化格式优化管线 | 翻译前对选中内容做断行合并、连字符断词修复、特殊符号正常化（确定性、零成本） |
-| ② 持久化翻译历史 | 数据库表存储，支持单条/按条目/清空删除，可复用为翻译缓存 |
-| ③ AI 总结侧边栏 | 翻译内容可用 AI 流式总结，结果可入历史 |
-| ④ 渠道自定义 | 通用 OpenAI 兼容渠道（DeepSeek 为预置模板），失败自动回退 |
-| ⑤ 丝滑体验 | 流式输出、队列+取消、划选即译（可关）、上下文感知 |
-| ⑥ 界面美观 | 卡片式现代风、跟随 Zotero 深浅主题 |
+| ② 持久化翻译历史     | 数据库表存储，支持单条/按条目/清空删除，可复用为翻译缓存                     |
+| ③ AI 总结侧边栏      | 翻译内容可用 AI 流式总结，结果可入历史                                       |
+| ④ 渠道自定义         | 通用 OpenAI 兼容渠道（DeepSeek 为预置模板），失败自动回退                    |
+| ⑤ 丝滑体验           | 流式输出、队列+取消、划选即译（可关）、上下文感知                            |
+| ⑥ 界面美观           | 卡片式现代风、跟随 Zotero 深浅主题                                           |
 
 ---
 
 ## 2. 已确认决策记录
 
-| # | 决策 | 结论 |
-|---|---|---|
-| Q1 | 输入源 | PDF 阅读器划选文本 + 选中条目元数据（标题/摘要） |
-| Q2 | 版本基线 | **Zotero 9 基线**；`strict_min_version: "6.999"`，`strict_max_version: "9.0.*"`，update.json 滚动放行 |
-| Q3 | 必应渠道 | Edge 匿名 token 流（默认）+ Azure key 可选（双模式） |
-| Q4 | 历史存储 | `Zotero.DataAccessObject` 自定义表 |
-| Q5 | 工程形态 | windingwind/zotero-plugin-template v3.1.0（TS + toolkit + scaffold） |
-| Q6 | 界面布局 | 阅读器侧栏区块（`ItemPaneManager.registerSection`）+ 条目面板区块，双布局同数据源 |
-| Q7 | 触发与呈现 | 划选弹层/右键菜单 + 可配置快捷键；结果在侧栏显示（PDF 覆盖显示 = v2） |
-| Q8 | 格式化 | 纯规则管线 |
-| Q9 | 自定义渠道 | 通用 OpenAI 兼容渠道，DeepSeek 为预置模板 |
-| Q10 | 总结 | 复用当前 AI 渠道、模型/提示词可覆盖、流式显示、可入历史 |
-| Q11 | 定位 | 功能差异化替代品（格式化/历史/总结/自定义渠道做深做透） |
-| Q12 | 设置 | 官方偏好面板为主 + 侧栏简版设置 |
-| Q13 | 历史容量 | 500 条上限自动清理；单条/按条目/清空删除；缓存复用默认开 |
-| Q14 | 失败处理 | 按配置顺序自动回退 + 失败提示 + 手动重试 |
-| Q15 | 丝滑体验 | 流式 + 队列/取消 + 划选即译(默认关,防抖) + 上下文感知，全做 |
-| Q16 | 界面风格 | 卡片式现代风，跟随 Zotero 深浅主题 |
-| Q17 | 发布 | 自用为主 + GitHub release（update.json 自动更新） |
+| #   | 决策       | 结论                                                                                                  |
+| --- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| Q1  | 输入源     | PDF 阅读器划选文本 + 选中条目元数据（标题/摘要）                                                      |
+| Q2  | 版本基线   | **Zotero 9 基线**；`strict_min_version: "6.999"`，`strict_max_version: "9.0.*"`，update.json 滚动放行 |
+| Q3  | 必应渠道   | Edge 匿名 token 流（默认）+ Azure key 可选（双模式）                                                  |
+| Q4  | 历史存储   | `Zotero.DataAccessObject` 自定义表                                                                    |
+| Q5  | 工程形态   | windingwind/zotero-plugin-template v3.1.0（TS + toolkit + scaffold）                                  |
+| Q6  | 界面布局   | 阅读器侧栏区块（`ItemPaneManager.registerSection`）+ 条目面板区块，双布局同数据源                     |
+| Q7  | 触发与呈现 | 划选弹层/右键菜单 + 可配置快捷键；结果在侧栏显示（PDF 覆盖显示 = v2）                                 |
+| Q8  | 格式化     | 纯规则管线                                                                                            |
+| Q9  | 自定义渠道 | 通用 OpenAI 兼容渠道，DeepSeek 为预置模板                                                             |
+| Q10 | 总结       | 复用当前 AI 渠道、模型/提示词可覆盖、流式显示、可入历史                                               |
+| Q11 | 定位       | 功能差异化替代品（格式化/历史/总结/自定义渠道做深做透）                                               |
+| Q12 | 设置       | 官方偏好面板为主 + 侧栏简版设置                                                                       |
+| Q13 | 历史容量   | 500 条上限自动清理；单条/按条目/清空删除；缓存复用默认开                                              |
+| Q14 | 失败处理   | 按配置顺序自动回退 + 失败提示 + 手动重试                                                              |
+| Q15 | 丝滑体验   | 流式 + 队列/取消 + 划选即译(默认关,防抖) + 上下文感知，全做                                           |
+| Q16 | 界面风格   | 卡片式现代风，跟随 Zotero 深浅主题                                                                    |
+| Q17 | 发布       | 自用为主 + GitHub release（update.json 自动更新）                                                     |
 
 假设（无异议即生效）：快捷键默认 `Cmd/Ctrl+Shift+T` 翻译、`Cmd/Ctrl+Shift+S` 总结（可配置）；界面中英双语（Fluent）；原文语言自动检测 + 手动覆盖；默认目标语言中文（zh-CN）。
 
@@ -121,6 +121,8 @@ ZoteroTranslatorNext/
 
 `Zotero.DataAccessObject.register("translationHistory", ...)`，启动时建表（`Zotero.DB` migration）。
 
+> **实施偏差（已在代码注释记录）**：`Zotero.DataAccessObject` 在 zotero-types 类型与 Zotero 9 源码中均不可验证，实施改用官方稳定且有类型的 `Zotero.DB`（`executeTransaction`/`queryAsync`/`rowQueryAsync`）直接建表与增删查，同样满足“数据库自定义表 + 缓存复用 + 容量清理”意图。
+
 ```sql
 CREATE TABLE translation_history (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,7 +143,7 @@ CREATE INDEX idx_history_created ON translation_history (createdAt);
 CREATE INDEX idx_history_cache  ON translation_history (engine, targetLang, sourceHash);
 ```
 
-**缓存策略**：查询 `(engine, targetLang, sourceHash)` 精确命中 → 直接返回历史译文（标记 `fromCache`）。默认开启，设置可关。
+**缓存策略**：查询 `(sourceHash, targetLang, engine)` 精确命中 → 直接返回历史译文（标记 `fromCache`）。`sourceHash` = **格式化后文本**的 FNV-1a64（实现偏差：方案原写 SHA-256，Zotero 旧环境无 WebCrypto，改用同步 FNV-1a64，见 `src/utils/hash.ts` 注释）。默认开启，设置可关。
 **容量**：默认 500 条，超限清理最旧（`createdAt ASC` 裁剪）；上限可配置。
 **删除粒度**：单条 / 按条目（itemID）/ 清空全部（设置面板含清空按钮）。
 
@@ -154,12 +156,12 @@ CREATE INDEX idx_history_cache  ON translation_history (engine, targetLang, sour
 ```ts
 interface TranslateTask {
   id: string;
-  sourceText: string;        // 格式化后的文本
-  context?: string;          // 前后文（仅 LLM 渠道使用）
-  sourceLang: string;        // 'auto' 或具体语言码
-  targetLang: string;        // 默认 'zh-CN'
-  channelId: string;         // 目标渠道
-  signal?: AbortSignal;      // 取消
+  sourceText: string; // 格式化后的文本
+  context?: string; // 前后文（仅 LLM 渠道使用）
+  sourceLang: string; // 'auto' 或具体语言码
+  targetLang: string; // 默认 'zh-CN'
+  channelId: string; // 目标渠道
+  signal?: AbortSignal; // 取消
 }
 
 interface TranslateResult {
@@ -169,17 +171,21 @@ interface TranslateResult {
 }
 
 abstract class TranslateService {
-  readonly id: string;          // 如 'bing' / 'deepseek' / 自定义 id
+  readonly id: string; // 如 'bing' / 'deepseek' / 自定义 id
   readonly name: string;
-  readonly kind: 'rule' | 'llm'; // llm 渠道启用上下文感知与总结
+  readonly kind: "rule" | "llm"; // llm 渠道启用上下文感知与总结
   readonly supportsStreaming: boolean;
-  abstract translate(task: TranslateTask, onChunk?: (t: string) => void): Promise<TranslateResult>;
+  abstract translate(
+    task: TranslateTask,
+    onChunk?: (t: string) => void,
+  ): Promise<TranslateResult>;
 }
 ```
 
 ### 6.2 必应渠道（BingService，默认）
 
 双模式（设置切换）：
+
 1. **Edge 匿名模式（默认，无需 key）**
    - `GET https://edge.microsoft.com/translate/auth` → Bearer token（缓存约 5 分钟）
    - `POST https://api-edge.cognitive.microsofttranslator.com/translate?api-version=3.0&from=...&to=...`
@@ -221,15 +227,15 @@ abstract class TranslateService {
 
 处理顺序（各规则可单独开关）：
 
-| 阶段 | 规则 | 示例 |
-|---|---|---|
-| 1 | 合并硬换行 | 行尾无标点且下一个小写字母开头 → 合并为空格 |
-| 2 | 修复连字符断词 | `word-⏎word` → `wordword`（英文）；保留真实连字符 |
-| 3 | 统一引号 | 英文弯引号/«» 规范化为成对中文引号（面向 zh 时）；孤引号修复 |
-| 4 | 破折号/连字符正常化 | `--`/`–` → 统一为 `—`（按语境）；`-` 保留 |
-| 5 | 全半角统一 | 标点按语言语境归一（保留代码/URL/数学公式不破坏） |
-| 6 | 压缩空白 | 多空格/空行 → 单；去除零宽字符（U+200B 等）、BOM |
-| 7 | 数学/特殊符号 | `×`/`−`/`·` 等规范化；上标/下标 Unicode 保留 |
+| 阶段 | 规则                | 示例                                                         |
+| ---- | ------------------- | ------------------------------------------------------------ |
+| 1    | 合并硬换行          | 行尾无标点且下一个小写字母开头 → 合并为空格                  |
+| 2    | 修复连字符断词      | `word-⏎word` → `wordword`（英文）；保留真实连字符            |
+| 3    | 统一引号            | 英文弯引号/«» 规范化为成对中文引号（面向 zh 时）；孤引号修复 |
+| 4    | 破折号/连字符正常化 | `--`/`–` → 统一为 `—`（按语境）；`-` 保留                    |
+| 5    | 全半角统一          | 标点按语言语境归一（保留代码/URL/数学公式不破坏）            |
+| 6    | 压缩空白            | 多空格/空行 → 单；去除零宽字符（U+200B 等）、BOM             |
+| 7    | 数学/特殊符号       | `×`/`−`/`·` 等规范化；上标/下标 Unicode 保留                 |
 
 **保护清单**：URL、DOI、邮箱、代码片段、LaTeX 公式、文献引用标记 `[12]` 等不参与规则改写。
 输出 `formattedText` 入历史，UI 提供"原文 / 格式化 / 译文"三段对照。管线为纯函数，配 mocha 单测（模板自带测试链）。
@@ -238,13 +244,13 @@ abstract class TranslateService {
 
 ## 8. 输入与触发
 
-| 入口 | 实现 |
-|---|---|
-| PDF 划选 | `Zotero.Reader.registerEventListener("renderTextSelectionPopup", ...)` 取 `params.annotation.text`，注入自定义弹层按钮（"翻译选中内容"）；备用：toolkit `ReaderTool.getSelectedText(reader)` |
-| 右键菜单 | 阅读器场景同上（自定义弹层）；Zotero 8+ 可增补 `Zotero.MenuManager.registerMenu` 注册原生右键项 |
-| 快捷键 | 主窗口 + 阅读器窗口 `keydown` 监听（无官方快捷键 API），默认 `Cmd/Ctrl+Shift+T` 翻译、`Cmd/Ctrl+Shift+S` 总结；忽略输入框/编辑态焦点；防冲突（设置可改/可关） |
-| 划选即译 | 划选后自动翻译（默认关），防抖（默认 800ms，可配） |
-| 条目元数据 | 条目面板区块按钮：翻译标题/摘要 → 走同一管线 → 历史关联 `itemID` |
+| 入口       | 实现                                                                                                                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PDF 划选   | `Zotero.Reader.registerEventListener("renderTextSelectionPopup", ...)` 取 `params.annotation.text`，注入自定义弹层按钮（"翻译选中内容"）；备用：toolkit `ReaderTool.getSelectedText(reader)` |
+| 右键菜单   | 阅读器场景同上（自定义弹层）；Zotero 8+ 可增补 `Zotero.MenuManager.registerMenu` 注册原生右键项                                                                                              |
+| 快捷键     | 主窗口 + 阅读器窗口 `keydown` 监听（无官方快捷键 API），默认 `Cmd/Ctrl+Shift+T` 翻译、`Cmd/Ctrl+Shift+S` 总结；忽略输入框/编辑态焦点；防冲突（设置可改/可关）                                |
+| 划选即译   | 划选后自动翻译（默认关），防抖（默认 800ms，可配）                                                                                                                                           |
+| 条目元数据 | 条目面板区块按钮：翻译标题/摘要 → 走同一管线 → 历史关联 `itemID`                                                                                                                             |
 
 **队列**：`tasks.ts` 单消费者队列（FIFO），任务状态机 `waiting → processing → success/fail/cancelled`，侧栏实时显示进度；当前任务可取消；连续划选自动入队。
 
@@ -296,14 +302,14 @@ abstract class TranslateService {
 
 ## 11. 里程碑（M1–M6）
 
-| 里程碑 | 内容 | 验收 |
-|---|---|---|
-| **M1 脚手架** | template 派生、manifest/prefs.js/pluginID 落地、骨架加载、两个区块占位渲染 | 9.x 启动无报错，区块可见 |
-| **M2 输入+格式化** | 划选弹层取文本、条目摘要入口、格式化管线 + 单测 | 选中→弹层→格式化结果正确 |
-| **M3 必应渠道** | **Edge 端点实测**（gap 项：401/429/验证码表现）→ BingService 双模式、队列/取消/进度 | 划选→翻译→侧栏显示 |
-| **M4 历史** | DAO 建表、增删查、缓存命中、容量清理、三段对照 | 历史持久/可删/缓存生效 |
-| **M5 AI 渠道** | DeepSeek 预置、自定义 OpenAI 渠道、流式、上下文感知、回退链 | 多渠道切换/回退/流式正常 |
-| **M6 总结+打磨+发布** | 总结窗口、设置面板、快捷键、i18n、卡片式美化、GitHub release | 全功能可用，update.json 更新链通 |
+| 里程碑                | 内容                                                                                | 验收                             |
+| --------------------- | ----------------------------------------------------------------------------------- | -------------------------------- |
+| **M1 脚手架**         | template 派生、manifest/prefs.js/pluginID 落地、骨架加载、两个区块占位渲染          | 9.x 启动无报错，区块可见         |
+| **M2 输入+格式化**    | 划选弹层取文本、条目摘要入口、格式化管线 + 单测                                     | 选中→弹层→格式化结果正确         |
+| **M3 必应渠道**       | **Edge 端点实测**（gap 项：401/429/验证码表现）→ BingService 双模式、队列/取消/进度 | 划选→翻译→侧栏显示               |
+| **M4 历史**           | DAO 建表、增删查、缓存命中、容量清理、三段对照                                      | 历史持久/可删/缓存生效           |
+| **M5 AI 渠道**        | DeepSeek 预置、自定义 OpenAI 渠道、流式、上下文感知、回退链                         | 多渠道切换/回退/流式正常         |
+| **M6 总结+打磨+发布** | 总结窗口、设置面板、快捷键、i18n、卡片式美化、GitHub release                        | 全功能可用，update.json 更新链通 |
 
 **M1–M6 每步结束打 tag**，release 走模板工作流。
 
@@ -311,16 +317,16 @@ abstract class TranslateService {
 
 ## 12. 风险与对策
 
-| 风险 | 对策 |
-|---|---|
-| Edge 端点可用性无 SLA（可能 401/429/验证码/失效） | M3 首日实测；双模式 + 回退链兜底；设置引导用户填 Azure key |
-| 未文档化端点行为变化 | 抽象 `TranslateService` 隔离；只改 bing.ts |
-| Zotero 9 的 ItemPaneManager 选项集与 7 有差异（`sectionButtons`/`onAsyncRender` 为后加） | 实施前对照 9.0 分支源码核对签名；以 9 为基线 |
-| Zotero 快速发版节奏（10/11 分支已存在） | 严守 `strict_max_version` 实测声明 + update.json 滚动放行；发布前回归 |
-| API key 明文存储（Zotero 无加密 API） | 设置面板隐私提示；key 只在内存/请求头使用 |
-| 快捷键冲突（Zotero 内置/其他插件） | 默认组合选冷门键位；全可配置可关 |
-| 自定义表与 Zotero 升级兼容 | DAO + migration 版本化管理，升级时 `db.version` 迁移 |
-| 超长文本/多段落 | 分块 + 队列 + 取消；流式缓解等待感 |
+| 风险                                                                                     | 对策                                                                  |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Edge 端点可用性无 SLA（可能 401/429/验证码/失效）                                        | M3 首日实测；双模式 + 回退链兜底；设置引导用户填 Azure key            |
+| 未文档化端点行为变化                                                                     | 抽象 `TranslateService` 隔离；只改 bing.ts                            |
+| Zotero 9 的 ItemPaneManager 选项集与 7 有差异（`sectionButtons`/`onAsyncRender` 为后加） | 实施前对照 9.0 分支源码核对签名；以 9 为基线                          |
+| Zotero 快速发版节奏（10/11 分支已存在）                                                  | 严守 `strict_max_version` 实测声明 + update.json 滚动放行；发布前回归 |
+| API key 明文存储（Zotero 无加密 API）                                                    | 设置面板隐私提示；key 只在内存/请求头使用                             |
+| 快捷键冲突（Zotero 内置/其他插件）                                                       | 默认组合选冷门键位；全可配置可关                                      |
+| 自定义表与 Zotero 升级兼容                                                               | DAO + migration 版本化管理，升级时 `db.version` 迁移                  |
+| 超长文本/多段落                                                                          | 分块 + 队列 + 取消；流式缓解等待感                                    |
 
 ---
 

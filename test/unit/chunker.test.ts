@@ -70,6 +70,9 @@ describe("chunkText 分块策略", () => {
 
   it("保留换行段落结构（段内有换行不切分）", () => {
     const text = "Line one\nline two\n\nNew para";
-    expect(chunkText(text, 50)).to.deep.equal(["Line one\nline two", "New para"]);
+    expect(chunkText(text, 50)).to.deep.equal([
+      "Line one\nline two",
+      "New para",
+    ]);
   });
 });

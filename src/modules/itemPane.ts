@@ -11,7 +11,12 @@ import {
   initialViewState,
   SectionViewState,
 } from "./sectionUI";
-import { listHistory, deleteHistory, HistoryRecord } from "./history";
+import {
+  listHistory,
+  deleteHistory,
+  deleteByItem,
+  HistoryRecord,
+} from "./history";
 import { getString } from "../utils/locale";
 
 const ITEM_PANE_ID = "translator-item";
@@ -66,7 +71,7 @@ export class ItemPaneModule {
       },
     });
 
-    this.translateMgr.onEvent = (ev) => {
+    this.translateMgr.addEventListener((ev) => {
       if (ev.type === "chunk") {
         this.view.status = "processing";
         this.view.streaming += ev.delta ?? "";
@@ -101,7 +106,7 @@ export class ItemPaneModule {
         this.view.streaming = "";
         this.refreshView();
       }
-    };
+    });
   }
 
   private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
@@ -130,7 +135,8 @@ export class ItemPaneModule {
     if (!text) {
       new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
         .createLine({
-          text: kind === "title" ? "该条目没有标题" : "该条目没有摘要",
+          text:
+            kind === "title" ? getString("no-title") : getString("no-abstract"),
           type: "error",
         })
         .show();
@@ -157,6 +163,26 @@ export class ItemPaneModule {
         void deleteHistory(id).then(() => this.refreshHistory(doc));
       },
     });
+    // 按条目删除（Q13）
+    if (this.currentItemID != null) {
+      const header =
+        this.skeleton.historyCard.querySelector(".ztr-card-header");
+      if (header && !header.querySelector("[data-act='clear-item']")) {
+        const btn = doc.createElementNS(
+          "http://www.w3.org/1999/xhtml",
+          "button",
+        );
+        btn.className = "ztr-btn ztr-btn-danger";
+        btn.setAttribute("data-act", "clear-item");
+        btn.textContent = getString("history-clear-item");
+        btn.addEventListener("click", () => {
+          void deleteByItem(this.currentItemID!).then(() =>
+            this.refreshHistory(doc),
+          );
+        });
+        header.append(btn);
+      }
+    }
   }
 
   private refreshView(): void {

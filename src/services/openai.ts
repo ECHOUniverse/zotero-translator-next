@@ -129,7 +129,8 @@ export class OpenAIService implements TranslateService {
         try {
           const json = JSON.parse(ev.data);
           const delta: string | undefined =
-            json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.message?.content;
+            json.choices?.[0]?.delta?.content ??
+            json.choices?.[0]?.message?.content;
           if (delta) {
             acc += delta;
             onChunk?.(delta);

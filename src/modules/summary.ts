@@ -8,8 +8,6 @@ import { OpenAIService } from "../services/openai";
 import { updateSummary } from "./history";
 
 export interface SummaryOptions {
-  /** 指定 LLM 渠道 id（默认：首个启用的 LLM 渠道） */
-  channelId?: string;
   /** 覆盖模型（默认：总结专用模型或渠道默认） */
   model?: string;
   /** 覆盖总结提示词（默认：summary.prompt） */
@@ -33,12 +31,12 @@ export async function summarize(
   opts: SummaryOptions = {},
   onChunk?: (delta: string) => void,
 ): Promise<SummaryResult> {
-  let channel = getFirstLLMChannel();
-  if (opts.channelId && channel?.id !== opts.channelId) {
-    channel = getFirstLLMChannel(); // 暂仅支持当前首选；多 LLM 渠道扩展时按 id 查找
-  }
+  // 复用当前启用的 LLM 渠道（多 LLM 渠道扩展时可按 channelId 查找）
+  const channel = getFirstLLMChannel();
   if (!channel || channel.kind !== "llm") {
-    throw new Error("总结需要 AI 渠道（DeepSeek 或自定义 OpenAI 兼容渠道），请先在设置中配置");
+    throw new Error(
+      "总结需要 AI 渠道（DeepSeek 或自定义 OpenAI 兼容渠道），请先在设置中配置",
+    );
   }
   const llm = channel as OpenAIService;
 

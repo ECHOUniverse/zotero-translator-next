@@ -25,20 +25,20 @@ pref("deepseek.baseURL", "https://api.deepseek.com");
 pref("deepseek.model", "deepseek-chat");
 pref(
   "deepseek.prompt",
-  "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation."
+  "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation.",
 );
-pref("channelsOrder", "[\"bing\",\"deepseek\"]");
+pref("channelsOrder", '["bing","deepseek"]');
 pref("customChannels", "[]");
 
 // 快捷键（JSON: {ctrl,shift,alt,meta,key}）
-pref("shortcut.translate", "{\"ctrl\":true,\"shift\":true,\"key\":\"T\"}");
-pref("shortcut.summary", "{\"ctrl\":true,\"shift\":true,\"key\":\"S\"}");
+pref("shortcut.translate", '{"ctrl":true,"shift":true,"key":"T"}');
+pref("shortcut.summary", '{"ctrl":true,"shift":true,"key":"S"}');
 
 // 总结
 pref("summary.model", "");
 pref(
   "summary.prompt",
-  "You are an academic assistant. Summarize the following translated text in {targetLang}: key findings, methods and conclusions. Be concise (within 300 words)."
+  "You are an academic assistant. Summarize the following translated text in {targetLang}: key findings, methods and conclusions. Be concise (within 300 words).",
 );
 
 // 格式化规则开关

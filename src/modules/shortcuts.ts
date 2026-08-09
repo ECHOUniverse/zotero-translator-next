@@ -30,10 +30,19 @@ export function matchShortcut(
   if (!spec) return false;
   const key = ev.key.length === 1 ? ev.key.toUpperCase() : ev.key;
   if (key !== spec.key.toUpperCase()) return false;
-  if (Boolean(spec.ctrl) !== ev.ctrlKey) return false;
+  const isMac =
+    (globalThis as any).Zotero?.isMac ?? navigator.platform?.includes("Mac");
+  // 主修饰键：spec.ctrl 且未声明 meta 时，mac 上匹配 Cmd（meta），其余平台匹配 Ctrl
+  const primaryOK =
+    spec.ctrl && !spec.meta
+      ? isMac
+        ? ev.metaKey
+        : ev.ctrlKey
+      : !spec.ctrl || ev.ctrlKey;
+  if (!primaryOK) return false;
   if (Boolean(spec.shift) !== ev.shiftKey) return false;
   if (Boolean(spec.alt) !== ev.altKey) return false;
-  if (Boolean(spec.meta) !== ev.metaKey) return false;
+  if (spec.meta && spec.meta !== ev.metaKey) return false;
   return true;
 }
 
@@ -81,9 +90,4 @@ export function registerShortcuts(
       win.dispatchEvent(new CustomEvent("ztr-summary-shortcut"));
     }
   });
-}
-
-/** 获取当前选中条目（工具函数） */
-export function getSelectedItems(): Zotero.Item[] {
-  return Zotero.getActiveZoteroPane()?.getSelectedItems() ?? [];
 }

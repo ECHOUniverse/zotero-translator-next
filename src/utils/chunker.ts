@@ -14,7 +14,10 @@ export function chunkText(text: string, maxChars: number): string[] {
   if (!text || !text.trim()) return [];
   const limit = Math.max(1, Math.floor(maxChars));
 
-  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const chunks: string[] = [];
 
   for (const para of paragraphs) {

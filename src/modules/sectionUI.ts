@@ -59,7 +59,10 @@ export function buildSectionSkeleton(doc: Document): {
   const root = el(doc, "div", { class: "ztr-section" });
   const toolbar = el(doc, "div", { class: "ztr-toolbar" });
   const resultCard = el(doc, "div", { class: "ztr-card ztr-result-card" });
-  const summaryCard = el(doc, "div", { class: "ztr-card ztr-summary-card", hidden: "true" });
+  const summaryCard = el(doc, "div", {
+    class: "ztr-card ztr-summary-card",
+    hidden: "true",
+  });
   const historyCard = el(doc, "div", { class: "ztr-card ztr-history-card" });
   root.append(toolbar, resultCard, summaryCard, historyCard);
   return { root, toolbar, resultCard, summaryCard, historyCard };
@@ -80,7 +83,9 @@ export function renderResultCard(
   container.textContent = "";
 
   const header = el(doc, "div", { class: "ztr-card-header" });
-  const statusLabel = el(doc, "span", { class: `ztr-status ztr-status-${view.status}` });
+  const statusLabel = el(doc, "span", {
+    class: `ztr-status ztr-status-${view.status}`,
+  });
   switch (view.status) {
     case "idle":
       statusLabel.textContent = getString("status-idle");
@@ -111,7 +116,12 @@ export function renderResultCard(
     );
   }
   if (view.status === "processing") {
-    const cancelBtn = el(doc, "button", { class: "ztr-btn", "data-act": "cancel" }, getString("btn-cancel"));
+    const cancelBtn = el(
+      doc,
+      "button",
+      { class: "ztr-btn", "data-act": "cancel" },
+      getString("btn-cancel"),
+    );
     cancelBtn.addEventListener("click", () => handlers.onCancel?.());
     header.append(cancelBtn);
   }
@@ -119,7 +129,12 @@ export function renderResultCard(
 
   if (view.status === "fail" && view.error) {
     container.append(el(doc, "div", { class: "ztr-error" }, view.error));
-    const retryBtn = el(doc, "button", { class: "ztr-btn", "data-act": "retry" }, getString("btn-retry"));
+    const retryBtn = el(
+      doc,
+      "button",
+      { class: "ztr-btn", "data-act": "retry" },
+      getString("btn-retry"),
+    );
     retryBtn.addEventListener("click", () => handlers.onRetry?.());
     container.append(retryBtn);
   }
@@ -138,14 +153,22 @@ export function renderResultCard(
 
     const renderTab = () => {
       if (mode === "src") textBox.textContent = view.result?.sourceText ?? "";
-      else if (mode === "fmt") textBox.textContent = view.result?.formattedText ?? "";
+      else if (mode === "fmt")
+        textBox.textContent = view.result?.formattedText ?? "";
       else textBox.textContent = view.result?.text ?? "";
     };
     for (const [m, label] of modes) {
-      const b = el(doc, "button", { class: "ztr-tab" + (m === mode ? " active" : "") }, label);
+      const b = el(
+        doc,
+        "button",
+        { class: "ztr-tab" + (m === mode ? " active" : "") },
+        label,
+      );
       b.addEventListener("click", () => {
         mode = m;
-        tabs.querySelectorAll(".ztr-tab").forEach((x: Element) => x.classList.remove("active"));
+        tabs
+          .querySelectorAll(".ztr-tab")
+          .forEach((x: Element) => x.classList.remove("active"));
         b.classList.add("active");
         renderTab();
       });
@@ -154,11 +177,23 @@ export function renderResultCard(
     container.append(tabs, textBox);
 
     const actions = el(doc, "div", { class: "ztr-actions" });
-    const copyBtn = el(doc, "button", { class: "ztr-btn", "data-act": "copy" }, getString("btn-copy"));
-    copyBtn.addEventListener("click", () => handlers.onCopy?.(textBox.textContent ?? ""));
+    const copyBtn = el(
+      doc,
+      "button",
+      { class: "ztr-btn", "data-act": "copy" },
+      getString("btn-copy"),
+    );
+    copyBtn.addEventListener("click", () =>
+      handlers.onCopy?.(textBox.textContent ?? ""),
+    );
     actions.append(copyBtn);
     if (handlers.onSummary) {
-      const sumBtn = el(doc, "button", { class: "ztr-btn", "data-act": "summary" }, getString("btn-summarize"));
+      const sumBtn = el(
+        doc,
+        "button",
+        { class: "ztr-btn", "data-act": "summary" },
+        getString("btn-summarize"),
+      );
       sumBtn.addEventListener("click", () => handlers.onSummary?.());
       actions.append(sumBtn);
     }
@@ -185,12 +220,19 @@ export function renderHistoryList(
   doc: Document,
   container: HTMLElement,
   records: HistoryRecord[],
-  handlers: { onDelete?: (id: number) => void; onSummarize?: (r: HistoryRecord) => void },
+  handlers: {
+    onDelete?: (id: number) => void;
+    onSummarize?: (r: HistoryRecord) => void;
+  },
 ): void {
   container.textContent = "";
-  container.append(el(doc, "div", { class: "ztr-card-header" }, getString("history-title")));
+  container.append(
+    el(doc, "div", { class: "ztr-card-header" }, getString("history-title")),
+  );
   if (records.length === 0) {
-    container.append(el(doc, "div", { class: "ztr-empty" }, getString("history-empty")));
+    container.append(
+      el(doc, "div", { class: "ztr-empty" }, getString("history-empty")),
+    );
     return;
   }
   for (const rec of records) {
@@ -198,17 +240,46 @@ export function renderHistoryList(
     const head = el(doc, "div", { class: "ztr-history-head" });
     head.append(
       el(doc, "span", { class: "ztr-badge" }, rec.engine),
-      el(doc, "span", { class: "ztr-history-time" }, new Date(rec.createdAt).toLocaleString()),
+      el(
+        doc,
+        "span",
+        { class: "ztr-history-time" },
+        new Date(rec.createdAt).toLocaleString(),
+      ),
     );
     const body = el(doc, "div", { class: "ztr-history-body" });
     const trans = el(doc, "div", { class: "ztr-history-trans" });
-    trans.textContent = rec.translatedText.slice(0, 200) + (rec.translatedText.length > 200 ? "…" : "");
+    trans.textContent =
+      rec.translatedText.slice(0, 200) +
+      (rec.translatedText.length > 200 ? "…" : "");
     body.append(trans);
     if (rec.summary) {
-      body.append(el(doc, "div", { class: "ztr-history-summary" }, `📝 ${rec.summary.slice(0, 150)}${rec.summary.length > 150 ? "…" : ""}`));
+      body.append(
+        el(
+          doc,
+          "div",
+          { class: "ztr-history-summary" },
+          `📝 ${rec.summary.slice(0, 150)}${rec.summary.length > 150 ? "…" : ""}`,
+        ),
+      );
     }
     const actions = el(doc, "div", { class: "ztr-history-actions" });
-    const delBtn = el(doc, "button", { class: "ztr-btn ztr-btn-danger", "data-act": "del" }, "🗑");
+    if (handlers.onSummarize) {
+      const sumBtn = el(
+        doc,
+        "button",
+        { class: "ztr-btn", "data-act": "sum" },
+        getString("btn-summarize"),
+      );
+      sumBtn.addEventListener("click", () => handlers.onSummarize?.(rec));
+      actions.append(sumBtn);
+    }
+    const delBtn = el(
+      doc,
+      "button",
+      { class: "ztr-btn ztr-btn-danger", "data-act": "del" },
+      "🗑",
+    );
     delBtn.title = getString("history-delete");
     delBtn.addEventListener("click", () => handlers.onDelete?.(rec.id));
     actions.append(delBtn);
@@ -221,14 +292,29 @@ export function renderHistoryList(
 export function renderSummaryCard(
   doc: Document,
   container: HTMLElement,
-  state: { status: "idle" | "processing" | "done" | "fail"; text: string; error?: string },
-  handlers: { onClose?: () => void; onSave?: () => void },
+  state: {
+    status: "idle" | "processing" | "done" | "fail";
+    text: string;
+    error?: string;
+  },
+  handlers: {
+    onClose?: () => void;
+    onSave?: () => void;
+    onRegenerate?: () => void;
+  },
 ): void {
   container.textContent = "";
   container.hidden = false;
   const header = el(doc, "div", { class: "ztr-card-header" });
-  header.append(el(doc, "span", { class: "ztr-status" }, getString("summary-title")));
-  const closeBtn = el(doc, "button", { class: "ztr-btn", "data-act": "close" }, "✕");
+  header.append(
+    el(doc, "span", { class: "ztr-status" }, getString("summary-title")),
+  );
+  const closeBtn = el(
+    doc,
+    "button",
+    { class: "ztr-btn", "data-act": "close" },
+    "✕",
+  );
   closeBtn.addEventListener("click", () => {
     container.hidden = true;
     handlers.onClose?.();
@@ -243,7 +329,12 @@ export function renderSummaryCard(
     container.append(el(doc, "div", { class: "ztr-error" }, state.error));
   }
   if (state.status === "done" && state.text) {
-    const saveBtn = el(doc, "button", { class: "ztr-btn", "data-act": "save" }, getString("btn-save-summary"));
+    const saveBtn = el(
+      doc,
+      "button",
+      { class: "ztr-btn", "data-act": "save" },
+      getString("btn-save-summary"),
+    );
     saveBtn.addEventListener("click", () => handlers.onSave?.());
     container.append(saveBtn);
   }

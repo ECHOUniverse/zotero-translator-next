@@ -28,7 +28,8 @@ export function parseSSE(buffer: string): { events: SSEEvent[]; rest: string } {
       if (rawLine.startsWith(":")) continue; // 注释
       const colon = rawLine.indexOf(":");
       const field = colon === -1 ? rawLine : rawLine.slice(0, colon);
-      const value = colon === -1 ? "" : rawLine.slice(colon + 1).replace(/^ /, "");
+      const value =
+        colon === -1 ? "" : rawLine.slice(colon + 1).replace(/^ /, "");
       if (field === "data") {
         ev.data = ev.data ? ev.data + "\n" + value : value;
         hasField = true;

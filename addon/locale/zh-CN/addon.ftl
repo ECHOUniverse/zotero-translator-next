@@ -23,3 +23,9 @@ history-delete = 删除该记录
 summary-title = AI 总结
 
 no-abstract = 该条目没有摘要
+btn-translate = 翻译
+no-selection = 请先在 PDF 中选中文本
+no-title = 该条目没有标题
+summary-saved = 总结已存入历史
+btn-regenerate = 重新生成
+history-clear-item = 清空该条目历史

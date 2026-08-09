@@ -43,11 +43,15 @@ export function detectLanguage(text: string): string {
  * 语言码适配：转换为目标渠道接受的格式。
  * bing: zh-CN → zh-Hans, zh-TW → zh-Hant, en → en
  */
-export function normalizeLangCode(code: string, channel: "bing" | "llm"): string {
+export function normalizeLangCode(
+  code: string,
+  channel: "bing" | "llm",
+): string {
   if (!code || code === "auto") return "auto";
   if (channel === "bing") {
     const lower = code.toLowerCase();
-    if (lower === "zh-cn" || lower === "zh-hans" || lower === "zh") return "zh-Hans";
+    if (lower === "zh-cn" || lower === "zh-hans" || lower === "zh")
+      return "zh-Hans";
     if (lower === "zh-tw" || lower === "zh-hant") return "zh-Hant";
     if (lower === "en" || lower === "en-us" || lower === "en-gb") return "en";
     return lower;

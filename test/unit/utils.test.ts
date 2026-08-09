@@ -12,17 +12,12 @@ describe("parseSSE SSE 流解析", () => {
   });
 
   it("多事件 + [DONE]", () => {
-    const { events } = parseSSE(
-      'data: {"x":"y"}\n\ndata: [DONE]\n\n',
-    );
-    expect(events).to.deep.equal([
-      { data: '{"x":"y"}' },
-      { data: "[DONE]" },
-    ]);
+    const { events } = parseSSE('data: {"x":"y"}\n\ndata: [DONE]\n\n');
+    expect(events).to.deep.equal([{ data: '{"x":"y"}' }, { data: "[DONE]" }]);
   });
 
   it("跨 buffer 残留（rest 保留未完成事件）", () => {
-    const { events, rest } = parseSSE('data: partial');
+    const { events, rest } = parseSSE("data: partial");
     expect(events).to.deep.equal([]);
     expect(rest).to.equal("data: partial");
     const next = parseSSE(rest + "\n\n");
@@ -67,7 +62,9 @@ describe("detectLanguage 语言检测", () => {
     expect(detectLanguage("이것은 테스트입니다.")).to.equal("ko");
   });
   it("混合文本按主要占比", () => {
-    expect(detectLanguage("中文中文 English words here 中文中文")).to.equal("zh");
+    expect(detectLanguage("中文中文 English words here 中文中文")).to.equal(
+      "zh",
+    );
   });
   it("无法判断 → auto", () => {
     expect(detectLanguage("12345 !!!")).to.equal("auto");
