@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+
+# 构建产物（zotero-plugin-template / scaffold）
+build/
+*.xpi
+
+# 日志
+*.log
+
+# 子代理运行产物（不入库）
+.pi-subagents/
