@@ -1,0 +1,309 @@
+/**
+ * 阅读器模块：侧栏区块（ItemPaneManager.registerSection）+ 划选弹层 + 自动翻译
+ */
+import { config } from "../../package.json";
+import { getLocaleID } from "../utils/locale";
+import { getPref } from "../utils/prefs";
+import { TranslateManager } from "./translate";
+import {
+  buildSectionSkeleton,
+  renderResultCard,
+  renderHistoryList,
+  renderSummaryCard,
+  updateStreamingText,
+  initialViewState,
+  SectionViewState,
+} from "./sectionUI";
+import { listHistory, deleteHistory, HistoryRecord } from "./history";
+import { summarize } from "./summary";
+
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
+
+const READER_PANE_ID = "translator-reader";
+const READER_SECTION_ID = "zotero-translator-next-reader-section";
+
+export class ReaderModule {
+  private view: SectionViewState = initialViewState();
+  private history: HistoryRecord[] = [];
+  private historyItemID: number | null = null;
+  private lastResultText = "";
+  private lastHistoryId: number | undefined;
+  private autoTimer: ReturnType<typeof setTimeout> | null = null;
+  private summaryState: {
+    status: "idle" | "processing" | "done" | "fail";
+    text: string;
+    error?: string;
+  } = { status: "idle", text: "" };
+  private summaryAbort: AbortController | null = null;
+
+  private translateMgr: TranslateManager;
+
+  constructor(translateMgr: TranslateManager) {
+    this.translateMgr = translateMgr;
+  }
+
+  /** 注册阅读器侧栏区块 + 划选事件 */
+  register(): void {
+    Zotero.ItemPaneManager.registerSection({
+      paneID: READER_PANE_ID,
+      pluginID: config.addonID,
+      header: {
+        l10nID: getLocaleID("reader-section-head"),
+        icon: "chrome://zotero/skin/16/universal/book.svg",
+      },
+      sidenav: {
+        l10nID: getLocaleID("reader-section-sidenav"),
+        icon: "chrome://zotero/skin/20/universal/book.svg",
+      },
+      bodyXHTML: `<html:div id="${READER_SECTION_ID}" />`,
+      onInit: () => {
+        this.wireEvents();
+        this.initSectionBody();
+      },
+      onItemChange: ({ setEnabled, tabType }) => {
+        setEnabled(tabType === "reader");
+        return true;
+      },
+      onRender: ({ body }) => {
+        const root = body.querySelector(`#${READER_SECTION_ID}`);
+        if (!root) return;
+        // 挂载骨架
+        if (!root.firstChild) {
+          const skeleton = buildSectionSkeleton(body.ownerDocument!);
+          root.appendChild(skeleton.root);
+          this.skeleton = skeleton;
+          this.refreshView();
+        }
+        void this.refreshHistory(body.ownerDocument!);
+      },
+    });
+
+    // 划选弹层：注入"翻译"按钮
+    Zotero.Reader.registerEventListener(
+      "renderTextSelectionPopup",
+      (event: any) => {
+        try {
+          const { doc, params, append } = event;
+          const text: string = (params?.annotation?.text ?? "").trim();
+          if (!text) return;
+          this.translateMgr.selectedText = text;
+          this.refreshSelectionButtons(doc);
+          if (getPref("translate.autoOnSelect")) {
+            this.scheduleAutoTranslate();
+          }
+          const btn = doc.createElementNS(XHTML_NS, "button");
+          btn.className = "ztr-popup-btn";
+          btn.textContent = "翻译";
+          btn.addEventListener("click", () => {
+            void this.translateSelection();
+          });
+          append(btn);
+        } catch (e) {
+          ztoolkit.log("popup handler error", e);
+        }
+      },
+      config.addonID,
+    );
+  }
+
+  private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
+  private doc: Document | null = null;
+
+  private initSectionBody(): void {
+    // bodyXHTML 已提供根元素；骨架在 onRender 中挂载
+  }
+
+  private wireEvents(): void {
+    this.translateMgr.onEvent = (ev) => {
+      if (ev.type === "chunk") {
+        this.view.status = "processing";
+        this.view.streaming += ev.delta ?? "";
+        this.refreshView();
+        return;
+      }
+      if (ev.type === "processing") {
+        this.view.status = "processing";
+        this.view.streaming = "";
+        this.refreshView();
+        return;
+      }
+      if (ev.type === "queued") {
+        this.view.status = "processing";
+        this.view.streaming = "";
+        this.refreshView();
+        return;
+      }
+      if (ev.type === "success" && ev.result) {
+        this.view.status = "success";
+        this.view.result = ev.result;
+        this.view.streaming = "";
+        this.lastResultText = ev.result.text;
+        this.lastHistoryId = ev.result.historyId;
+        this.summaryState = { status: "idle", text: "" };
+        this.refreshView();
+        if (this.doc) void this.refreshHistory(this.doc);
+        return;
+      }
+      if (ev.type === "fail") {
+        this.view.status = "fail";
+        this.view.error = ev.error;
+        this.view.streaming = "";
+        this.refreshView();
+        return;
+      }
+      if (ev.type === "cancelled") {
+        this.view.status = "cancelled";
+        this.view.streaming = "";
+        this.refreshView();
+      }
+    };
+  }
+
+  private refreshSelectionButtons(doc: Document): void {
+    this.doc = doc;
+    // 更新工具栏按钮可用态（阅读器区块内）
+    this.refreshView();
+  }
+
+  private scheduleAutoTranslate(): void {
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.autoTimer = setTimeout(() => {
+      void this.translateSelection();
+    }, getPref("translate.autoDebounceMs"));
+  }
+
+  /** 翻译当前选中文本 */
+  async translateSelection(): Promise<void> {
+    const text = this.translateMgr.selectedText?.trim();
+    if (!text) {
+      new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
+        .createLine({ text: "请先在 PDF 中选中文本", type: "error" })
+        .show();
+      return;
+    }
+    this.view = initialViewState();
+    this.refreshView();
+    this.translateMgr.translate({
+      sourceText: text,
+      itemID: undefined, // 划选翻译不绑定条目（保持历史为全局可见）
+    });
+  }
+
+  /** 重试最近一次翻译 */
+  private retryLast(): void {
+    const text = this.translateMgr.selectedText?.trim();
+    if (!text) return;
+    this.translateMgr.translate({ sourceText: text });
+  }
+
+  private async refreshHistory(doc: Document): Promise<void> {
+    const records = await listHistory({ itemID: this.historyItemID ?? undefined, limit: 50 });
+    this.history = records;
+    if (this.skeleton) {
+      renderHistoryList(doc, this.skeleton.historyCard, records, {
+        onDelete: (id) => {
+          void deleteHistory(id).then(() => this.refreshHistory(doc));
+        },
+        onSummarize: (r) => {
+          this.lastResultText = r.translatedText;
+          this.lastHistoryId = r.id;
+          this.summaryState = { status: "idle", text: "" };
+          void this.startSummary();
+        },
+      });
+    }
+  }
+
+  private refreshView(): void {
+    if (!this.skeleton) return;
+    const doc = this.skeleton.root.ownerDocument!;
+    renderResultCard(doc, this.skeleton.resultCard, this.view, {
+      onRetry: () => this.retryLast(),
+      onCancel: () => this.translateMgr.cancelCurrent(),
+      onCopy: (text) => {
+        const clipboard = requireClipboard();
+        clipboard.setData("text/plain", text);
+      },
+      onSummary: () => void this.startSummary(),
+    });
+    if (this.view.status === "processing") {
+      updateStreamingText(doc, this.skeleton.resultCard, this.view.streaming);
+    }
+  }
+
+  /** 总结最近一次译文（快捷键入口） */
+  async summaryFromShortcut(): Promise<void> {
+    if (!this.lastResultText) {
+      new ztoolkit.ProgressWindow(config.addonName, { closeTime: 3000 })
+        .createLine({ text: "请先完成一次翻译", type: "error" })
+        .show();
+      return;
+    }
+    await this.startSummary();
+  }
+
+  /** 启动总结（对最近一次译文） */
+  private async startSummary(): Promise<void> {
+    if (!this.lastResultText) return;
+    this.summaryState = { status: "processing", text: "" };
+    this.summaryAbort = new AbortController();
+    if (this.skeleton) {
+      renderSummaryCard(this.skeleton.root.ownerDocument!, this.skeleton.summaryCard, this.summaryState, {
+        onClose: () => void 0,
+        onSave: () => void 0,
+      });
+    }
+    try {
+      const res = await summarize(
+        this.lastResultText,
+        { signal: this.summaryAbort.signal, historyId: this.lastHistoryId },
+        (delta) => {
+          this.summaryState.text += delta;
+          if (this.skeleton) {
+            const card = this.skeleton.summaryCard;
+            const body = card.querySelector(".ztr-text");
+            if (body) body.textContent = this.summaryState.text;
+          }
+        },
+      );
+      this.summaryState = { status: "done", text: res.text };
+    } catch (e) {
+      this.summaryState = {
+        status: "fail",
+        text: "",
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+    if (this.skeleton) {
+      renderSummaryCard(this.skeleton.root.ownerDocument!, this.skeleton.summaryCard, this.summaryState, {
+        onClose: () => void 0,
+        onSave: () => void 0,
+      });
+      if (this.doc) void this.refreshHistory(this.doc);
+    }
+  }
+}
+
+/** 剪贴板访问（Zotero 主窗口 chrome 上下文） */
+function requireClipboard(): {
+  setData: (type: string, value: string) => void;
+} {
+  const clipboard = (globalThis as any).ClipboardHelper as
+    | { copyString: (s: string) => void }
+    | undefined;
+  if (clipboard?.copyString) {
+    return {
+      setData: (type, value) => {
+        void type;
+        clipboard.copyString(value);
+      },
+    };
+  }
+  // 兜底：navigator.clipboard（可能不可用）
+  return {
+    setData: (type, value) => {
+      void type;
+      void navigator.clipboard?.writeText(value);
+    },
+  };
+}

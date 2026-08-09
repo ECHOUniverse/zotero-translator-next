@@ -1,15 +1,18 @@
-# macOS
+# dot files
 .DS_Store
 
-# Node
-node_modules/
+# Node.js
+node_modules
+pnpm-lock.yaml
+yarn.lock
 
-# 构建产物（zotero-plugin-template / scaffold）
-build/
-*.xpi
+# TSC
+tsconfig.tsbuildinfo
 
-# 日志
-*.log
-
+# Scaffold
+.env
+.scaffold
+build
+logs
 # 子代理运行产物（不入库）
 .pi-subagents/
