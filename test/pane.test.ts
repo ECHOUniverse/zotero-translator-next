@@ -89,7 +89,10 @@ describe("item-pane-custom-section visibility", function () {
     const body = (captured.renderBody || captured.initBody) as HTMLElement;
     const cs = getComputedStyle(body);
 
-    log("mount: init body === render body", captured.initBody === captured.renderBody);
+    log(
+      "mount: init body === render body",
+      captured.initBody === captured.renderBody,
+    );
     log("mount: body children", body.children.length);
     log("mount: root class", body.querySelector(".diag-root")?.className);
     log("mount: open attr", section.hasAttribute("open"));
@@ -141,10 +144,7 @@ describe("item-pane-custom-section visibility", function () {
     const body = section.querySelector('[data-type="body"]') as HTMLElement;
     const cs = getComputedStyle(body);
     log("real: open attr", section.hasAttribute("open"));
-    log(
-      "real: --open-height",
-      section.style.getPropertyValue("--open-height"),
-    );
+    log("real: --open-height", section.style.getPropertyValue("--open-height"));
     log("real: body children", body.children.length);
     log("real: body computed", {
       maxHeight: cs.maxHeight,
