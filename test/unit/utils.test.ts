@@ -1,4 +1,3 @@
-import { describe, it } from "mocha";
 import { expect } from "chai";
 import { parseSSE } from "../../src/utils/sse.js";
 import { detectLanguage, normalizeLangCode } from "../../src/utils/lang.js";

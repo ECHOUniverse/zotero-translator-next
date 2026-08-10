@@ -1,4 +1,3 @@
-import { describe, it } from "mocha";
 import { expect } from "chai";
 import { formatText, DEFAULT_FORMAT_OPTIONS } from "../../src/utils/format.js";
 
