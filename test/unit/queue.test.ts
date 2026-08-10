@@ -132,55 +132,55 @@ describe("TaskQueue 任务队列", function () {
     await q.add("good2");
     expect(order).to.deep.equal(["good1", "good2"]);
   });
-});
 
-describe("TaskQueue 在无 AbortController 环境（Zotero 9 沙盒实证）", function () {
-  let orig: any;
+  describe("无 AbortController 环境（Zotero 9 沙盒实证）", function () {
+    let orig: any;
 
-  before(function () {
-    orig = (globalThis as any).AbortController;
-    delete (globalThis as any).AbortController;
-  });
-
-  after(function () {
-    (globalThis as any).AbortController = orig;
-  });
-
-  it("任务正常执行（无取消信号）", async function () {
-    const q = new TaskQueue<number>(async (n, signal) => {
-      expect(signal).to.equal(undefined);
+    before(function () {
+      orig = (globalThis as any).AbortController;
+      delete (globalThis as any).AbortController;
     });
-    const task = await q.add(7);
-    expect(task.status).to.equal("success");
-  });
 
-  it("处理器异常仍正确标记 fail，队列不死锁（后续任务可继续）", async function () {
-    const q = new TaskQueue<number>(async (n) => {
-      if (n === 1) throw new Error("boom");
+    after(function () {
+      (globalThis as any).AbortController = orig;
     });
-    let caught: unknown;
-    try {
-      await q.add(1);
-    } catch (e) {
-      caught = e;
-    }
-    expect((caught as Error).message).to.equal("boom");
-    // 死锁回归：队列锁必须在异常后释放
-    const task = await q.add(2);
-    expect(task.status).to.equal("success");
-  });
 
-  it("cancel 处理中任务为 no-op 且不崩溃", async function () {
-    let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    const q = new TaskQueue<number>(async (n) => {
-      if (n === 1) await gate;
+    it("任务正常执行（无取消信号）", async function () {
+      const q = new TaskQueue<number>(async (n, signal) => {
+        expect(signal).to.equal(undefined);
+      });
+      const task = await q.add(7);
+      expect(task.status).to.equal("success");
     });
-    const p1 = q.add(1);
-    await sleep(10);
-    expect(q.cancelProcessing()).to.equal(false); // 无取消能力
-    expect(q.cancel("nonexistent")).to.equal(false);
-    release();
-    await p1;
+
+    it("处理器异常仍正确标记 fail，队列不死锁（后续任务可继续）", async function () {
+      const q = new TaskQueue<number>(async (n) => {
+        if (n === 1) throw new Error("boom");
+      });
+      let caught: unknown;
+      try {
+        await q.add(1);
+      } catch (e) {
+        caught = e;
+      }
+      expect((caught as Error).message).to.equal("boom");
+      // 死锁回归：队列锁必须在异常后释放
+      const task = await q.add(2);
+      expect(task.status).to.equal("success");
+    });
+
+    it("cancel 处理中任务为 no-op 且不崩溃", async function () {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const q = new TaskQueue<number>(async (n) => {
+        if (n === 1) await gate;
+      });
+      const p1 = q.add(1);
+      await sleep(10);
+      expect(q.cancelProcessing()).to.equal(false); // 无取消能力
+      expect(q.cancel("nonexistent")).to.equal(false);
+      release();
+      await p1;
+    });
   });
 });

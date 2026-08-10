@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { parseSSE } from "../../src/utils/sse.js";
 import { detectLanguage, normalizeLangCode } from "../../src/utils/lang.js";
 import { fnv1a64 } from "../../src/utils/hash.js";
+import { createAbortController, isAborted } from "../../src/utils/abort.js";
 
 describe("utils 工具函数", function () {
   describe("parseSSE SSE 流解析", function () {
@@ -111,27 +112,23 @@ describe("utils 工具函数", function () {
       expect(fnv1a64("")).to.match(/^[0-9a-f]{16}$/);
     });
   });
-});
 
-describe("abort 安全工厂（Zotero 9 沙盒无 AbortController）", function () {
-  it("有 AbortController 时返回实例", function () {
-    const { createAbortController } =
-      require("../../src/utils/abort.js") as any;
-    const c = createAbortController();
-    expect(c).to.not.equal(null);
-    expect(c!.signal.aborted).to.equal(false);
-  });
+  describe("abort 安全工厂（Zotero 9 沙盒无 AbortController）", function () {
+    it("有 AbortController 时返回实例", function () {
+      const c = createAbortController();
+      expect(c).to.not.equal(null);
+      expect(c!.signal.aborted).to.equal(false);
+    });
 
-  it("无 AbortController 时返回 null（不抛错）", function () {
-    const orig = (globalThis as any).AbortController;
-    delete (globalThis as any).AbortController;
-    try {
-      const { createAbortController, isAborted } =
-        require("../../src/utils/abort.js") as any;
-      expect(createAbortController()).to.equal(null);
-      expect(isAborted(null)).to.equal(false);
-    } finally {
-      (globalThis as any).AbortController = orig;
-    }
+    it("无 AbortController 时返回 null（不抛错）", function () {
+      const orig = (globalThis as any).AbortController;
+      delete (globalThis as any).AbortController;
+      try {
+        expect(createAbortController()).to.equal(null);
+        expect(isAborted(null)).to.equal(false);
+      } finally {
+        (globalThis as any).AbortController = orig;
+      }
+    });
   });
 });
