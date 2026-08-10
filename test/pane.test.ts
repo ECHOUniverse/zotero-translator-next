@@ -177,4 +177,49 @@ describe("item-pane-custom-section visibility", function () {
       section.remove();
     });
   });
+
+  describe("v0.1.5 bodyXHTML 静态骨架 + 兜底挂载", function () {
+    it("sectionBodyXHTML 生成含骨架容器的 XHTML 片段", async function () {
+      const { sectionBodyXHTML } = await import("../src/modules/sectionUI.js");
+      const html = sectionBodyXHTML("test-section-id");
+      assert.include(html, 'id="test-section-id"');
+      assert.include(html, "ztr-toolbar");
+      assert.include(html, "ztr-result-card");
+      assert.include(html, "ztr-summary-card");
+      assert.include(html, "ztr-history-card");
+      assert.include(html, "html:div");
+    });
+
+    it("adoptSectionSkeleton 从既有骨架容器中采用（缺则创建）", async function () {
+      const { adoptSectionSkeleton } =
+        await import("../src/modules/sectionUI.js");
+      const win = Zotero.getMainWindow();
+      const doc = win.document;
+      const root = doc.createElementNS(
+        "http://www.w3.org/1999/xhtml",
+        "div",
+      ) as HTMLElement;
+      root.className = "ztr-section";
+      const toolbar = doc.createElementNS(
+        "http://www.w3.org/1999/xhtml",
+        "div",
+      ) as HTMLElement;
+      toolbar.className = "ztr-toolbar";
+      const result = doc.createElementNS(
+        "http://www.w3.org/1999/xhtml",
+        "div",
+      ) as HTMLElement;
+      result.className = "ztr-card ztr-result-card";
+      root.append(toolbar, result);
+      doc.documentElement.append(root);
+
+      const sk = adoptSectionSkeleton(doc, root);
+      assert.equal(sk.toolbar, toolbar, "复用注入的 toolbar");
+      assert.equal(sk.resultCard, result, "复用注入的 resultCard");
+      assert.ok(sk.summaryCard, "缺失的 summaryCard 被创建");
+      assert.ok(sk.historyCard, "缺失的 historyCard 被创建");
+      assert.equal(root.children.length, 4, "骨架容器齐全");
+      root.remove();
+    });
+  });
 });

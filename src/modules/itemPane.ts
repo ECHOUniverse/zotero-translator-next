@@ -5,7 +5,9 @@ import { config } from "../../package.json";
 import { getLocaleID } from "../utils/locale";
 import { TranslateManager } from "./translate";
 import {
-  buildSectionSkeleton,
+  SectionSkeleton,
+  sectionBodyXHTML,
+  adoptSectionSkeleton,
   forceSectionOpenHeight,
   ensureSectionOpen,
   forceBodyVisible,
@@ -50,15 +52,21 @@ export class ItemPaneModule {
         l10nID: getLocaleID("item-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/save.svg",
       },
+      // 静态骨架由 Zotero 框架注入 body（不依赖 hook 时序）
+      bodyXHTML: sectionBodyXHTML(ITEM_SECTION_ID),
       onInit: (props: any) => {
         // Zotero 9: props 含 { paneID, doc, body }；7 可能只有 { item }
         const body = props?.body;
         if (body) {
           this.mountSkeleton(body);
         }
-        ztoolkit.log("item section init", { hasBody: Boolean(body) });
+        console.log("[ZoteroTranslatorNext] item section init", {
+          hasBody: Boolean(body),
+          tabType: props?.tabType,
+        });
       },
       onItemChange: ({ setEnabled, tabType }) => {
+        // 条目翻译区块只在主窗口 library 显示
         setEnabled(tabType === "library");
         return true;
       },
@@ -113,37 +121,45 @@ export class ItemPaneModule {
     });
   }
 
-  private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
+  private skeleton: SectionSkeleton | null = null;
 
   /** 挂载骨架（幂等：已有内容则跳过） */
   private mountSkeleton(body: Element): void {
     const doc = body.ownerDocument!;
+    // 可见性三重保障前置：即使后续渲染步骤异常，内容也必定可见
+    forceBodyVisible(body);
+    forceSectionOpenHeight(body);
+    ensureSectionOpen(body);
     let root = body.querySelector(`#${ITEM_SECTION_ID}`) as HTMLElement | null;
+    if (!root) root = body.querySelector(".ztr-section") as HTMLElement | null;
     if (!root) {
       root = doc.createElementNS(
         "http://www.w3.org/1999/xhtml",
         "div",
       ) as HTMLElement;
       root.id = ITEM_SECTION_ID;
+      root.className = "ztr-section";
       root.style.height = "100%";
       body.appendChild(root);
     }
-    // 可见性三重保障前置：即使后续渲染步骤异常，内容也必定可见
-    forceBodyVisible(body);
-    forceSectionOpenHeight(body);
-    ensureSectionOpen(body);
-    if (root.firstChild) {
+    if (root.dataset.ztrMounted === "1") {
+      this.skeleton = adoptSectionSkeleton(doc, root);
       return;
     }
-    const skeleton = buildSectionSkeleton(doc);
-    root.appendChild(skeleton.root);
-    this.skeleton = skeleton;
+    root.dataset.ztrMounted = "1";
+    this.skeleton = adoptSectionSkeleton(doc, root);
     try {
-      this.buildToolbar(doc, skeleton.toolbar);
+      this.buildToolbar(doc, this.skeleton.toolbar);
     } catch (e) {
       console.error("[ZoteroTranslatorNext] item buildToolbar failed", e);
     }
     console.log("[ZoteroTranslatorNext] item section mounted");
+  }
+
+  /** 供 MutationObserver 兑底使用：对已存在的区块元素强制挂载 */
+  mountExistingSection(elem: Element): void {
+    const body = elem.querySelector('[data-type="body"]') as Element | null;
+    if (body) this.mountSkeleton(body);
   }
 
   private buildToolbar(doc: Document, toolbar: HTMLElement): void {

@@ -48,6 +48,57 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/**
+ * 区块 body 的静态骨架 HTML（经 bodyXHTML 由 Zotero 框架注入 body）。
+ *
+ * 为什么必须用 bodyXHTML：Zotero 的 item-pane-custom-section 在元素创建时
+ * 就把 bodyXHTML 内容解析进 `[data-type="body"]`，完全不依赖 onInit/onRender
+ * hook 的触发时序——即使 hook 全部失效，骨架也必定在 DOM 中。
+ * 之后再由 mountSkeleton 往里填充动态内容（幂等）。
+ */
+export function sectionBodyXHTML(rootID: string): string {
+  return `
+<html:div id="${rootID}" class="ztr-section">
+  <html:div class="ztr-toolbar"></html:div>
+  <html:div class="ztr-card ztr-result-card"></html:div>
+  <html:div class="ztr-card ztr-summary-card" hidden="true"></html:div>
+  <html:div class="ztr-card ztr-history-card"></html:div>
+</html:div>`;
+}
+
+/** 区块骨架容器集合（bodyXHTML 注入或动态创建） */
+export interface SectionSkeleton {
+  root: HTMLElement;
+  toolbar: HTMLElement;
+  resultCard: HTMLElement;
+  summaryCard: HTMLElement;
+  historyCard: HTMLElement;
+}
+
+/** 从 root 内采用骨架容器（bodyXHTML 注入的或动态创建的），缺则创建 */
+export function adoptSectionSkeleton(
+  doc: Document,
+  root: HTMLElement,
+): SectionSkeleton {
+  const q = (sel: string, cls: string): HTMLElement => {
+    let node = root.querySelector(sel) as HTMLElement | null;
+    if (!node) {
+      node = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
+      node.setAttribute("class", cls);
+      if (cls.includes("ztr-summary-card")) node.hidden = true;
+      root.appendChild(node);
+    }
+    return node;
+  };
+  return {
+    root,
+    toolbar: q(".ztr-toolbar", "ztr-toolbar"),
+    resultCard: q(".ztr-result-card", "ztr-card ztr-result-card"),
+    summaryCard: q(".ztr-summary-card", "ztr-card ztr-summary-card"),
+    historyCard: q(".ztr-history-card", "ztr-card ztr-history-card"),
+  };
+}
+
 /** 在 XHTML 根元素上建立区块骨架，返回各数据钩子元素 */
 export function buildSectionSkeleton(doc: Document): {
   root: HTMLElement;

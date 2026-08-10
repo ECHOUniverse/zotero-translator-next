@@ -9,7 +9,9 @@ import { createAbortController } from "../utils/abort";
 import { TranslateManager } from "./translate";
 import {
   el,
-  buildSectionSkeleton,
+  SectionSkeleton,
+  sectionBodyXHTML,
+  adoptSectionSkeleton,
   forceSectionOpenHeight,
   ensureSectionOpen,
   forceBodyVisible,
@@ -71,33 +73,40 @@ export class ReaderModule {
         l10nID: getLocaleID("reader-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/book.svg",
       },
+      // 静态骨架由 Zotero 框架注入 body（不依赖 hook 时序，阅读器侧栏/主窗口均生效）
+      bodyXHTML: sectionBodyXHTML(READER_SECTION_ID),
       onInit: (props: any) => {
-        // Zotero 9: props 含 { paneID, doc, body }；7 可能只有 { item }
+        // Zotero 9: props 含 { paneID, doc, body, tabType }；7 可能只有 { item }
         this.wireEvents();
         const body = props?.body;
         if (body) {
           // 骨架挂载不依赖 bodyXHTML/onRender 时机（bodyXHTML 注入先于 onInit）
           this.mountSkeleton(body);
         }
-        ztoolkit.log("reader section init", { hasBody: Boolean(body) });
+        console.log("[ZoteroTranslatorNext] reader section init", {
+          hasBody: Boolean(body),
+          tabType: props?.tabType,
+        });
       },
-      onItemChange: ({ setEnabled }) => {
-        // 恒启用（zotero-pdf-translate 同款做法，避免 tabType 意外值导致区块禁用）
-        setEnabled(true);
+      onItemChange: ({ setEnabled, tabType }) => {
+        // 只在阅读器侧栏（tabType="reader"）显示；主窗口 library 不显示
+        // （与 zotero-pdf-translate 同款语义，避免主窗口重复标题区块）
+        setEnabled(tabType === "reader");
         return true;
       },
-      onRender: ({ body }) => {
+      onRender: ({ body, tabType }) => {
         const doc = body.ownerDocument!;
         // 兜底：onInit 未挂载时（老版本无 body props）在此挂载
         this.mountSkeleton(body);
         void this.refreshHistory(doc);
-        ztoolkit.log("reader section rendered", {
+        console.log("[ZoteroTranslatorNext] reader section rendered", {
           bodyChildren: body.children.length,
+          tabType,
         });
       },
     });
     if (!paneID) {
-      ztoolkit.log("reader section registration failed");
+      console.log("[ZoteroTranslatorNext] reader section registration failed");
     }
 
     // 阅读器工具栏按钮（稳定触发路径；划选弹层可能被其他插件（如 Translate for Zotero）劫持）
@@ -153,29 +162,35 @@ export class ReaderModule {
     );
   }
 
-  /** 挂载骨架（幂等：同一 body 已有内容则跳过；每次调用都先保证可见性） */
+  /** 挂载骨架（幂等：同一 body 已有内容则跳过；每次调用都先保证可见性）
+   *
+   * 骨架来源优先：bodyXHTML 注入的静态骨架（Zotero 框架层保证存在）；
+   * 兜底：手动创建。填充动态内容（工具栏/视图/历史）幂等。 */
   private mountSkeleton(body: Element): void {
     const doc = body.ownerDocument!;
-    let root = body.querySelector(
-      `#${READER_SECTION_ID}`,
-    ) as HTMLElement | null;
-    if (!root) {
-      root = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
-      root.id = READER_SECTION_ID;
-      root.style.height = "100%";
-      body.appendChild(root);
-    }
     // 可见性三重保障前置：即使后续渲染步骤异常，内容也必定可见
     forceBodyVisible(body);
     forceSectionOpenHeight(body);
     ensureSectionOpen(body);
 
-    if (root.firstChild) {
-      // 已挂载过（重渲染/多 tab 场景）：只做可见性保障，不重复挂载
+    let root = body.querySelector(
+      `#${READER_SECTION_ID}`,
+    ) as HTMLElement | null;
+    if (!root) root = body.querySelector(".ztr-section") as HTMLElement | null;
+    if (!root) {
+      root = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
+      root.id = READER_SECTION_ID;
+      root.className = "ztr-section";
+      root.style.height = "100%";
+      body.appendChild(root);
+    }
+    if (root.dataset.ztrMounted === "1") {
+      // 已填充过（重渲染/多实例）：只做可见性保障 + 记录 skeleton 引用
+      this.skeleton = adoptSectionSkeleton(doc, root);
       return;
     }
-    const skeleton = buildSectionSkeleton(doc);
-    root.appendChild(skeleton.root);
+    root.dataset.ztrMounted = "1";
+    const skeleton = adoptSectionSkeleton(doc, root);
     this.skeleton = skeleton;
     try {
       this.buildToolbar(doc, skeleton.toolbar);
@@ -191,6 +206,12 @@ export class ReaderModule {
     console.log("[ZoteroTranslatorNext] reader section mounted", {
       rootChildren: root.children.length,
     });
+  }
+
+  /** 供 MutationObserver 兑底使用：对已存在的区块元素强制挂载 */
+  mountExistingSection(elem: Element): void {
+    const body = elem.querySelector('[data-type="body"]') as Element | null;
+    if (body) this.mountSkeleton(body);
   }
 
   /** 挂载后延迟审计可见性（输出到日志，便于远程诊断；不影响功能） */
@@ -219,7 +240,7 @@ export class ReaderModule {
     }
   }
 
-  private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
+  private skeleton: SectionSkeleton | null = null;
   private doc: Document | null = null;
 
   /** 构建工具栏（渠道/目标语言快捷切换 = 侧栏简版设置） */
