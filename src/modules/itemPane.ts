@@ -47,32 +47,23 @@ export class ItemPaneModule {
         l10nID: getLocaleID("item-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/save.svg",
       },
-      bodyXHTML: `<html:div id="${ITEM_SECTION_ID}"></html:div>`,
-      onItemChange: ({ setEnabled, tabType }) => {
-        setEnabled(tabType === "library");
+      onInit: (props: any) => {
+        // Zotero 9: props 含 { paneID, doc, body }；7 可能只有 { item }
+        const body = props?.body;
+        if (body) {
+          this.mountSkeleton(body);
+        }
+        ztoolkit.log("item section init", { hasBody: Boolean(body) });
+      },
+      onItemChange: ({ setEnabled }) => {
+        // 恒启用，避免 tabType 意外值导致区块禁用
+        setEnabled(true);
         return true;
       },
       onRender: ({ body, item }) => {
         const doc = body.ownerDocument!;
-        // 自愈：bodyXHTML 在部分版本解析失败时直接创建根元素
-        let root = body.querySelector(
-          `#${ITEM_SECTION_ID}`,
-        ) as HTMLElement | null;
-        if (!root) {
-          root = doc.createElementNS(
-            "http://www.w3.org/1999/xhtml",
-            "div",
-          ) as HTMLElement;
-          root.id = ITEM_SECTION_ID;
-          root.style.height = "100%";
-          body.appendChild(root);
-        }
-        if (!root.firstChild) {
-          const skeleton = buildSectionSkeleton(doc);
-          root.appendChild(skeleton.root);
-          this.skeleton = skeleton;
-          this.buildToolbar(doc, skeleton.toolbar);
-        }
+        // 兜底：onInit 未挂载时（老版本无 body props）在此挂载
+        this.mountSkeleton(body);
         this.currentItemID = item?.id ?? null;
         this.currentTitle = item?.getField("title") ?? "";
         this.currentAbstract = item?.getField("abstractNote") ?? "";
@@ -121,6 +112,30 @@ export class ItemPaneModule {
   }
 
   private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
+
+  /** 挂载骨架（幂等：已有内容则跳过） */
+  private mountSkeleton(body: Element): void {
+    if (this.skeleton) return;
+    const doc = body.ownerDocument!;
+    let root = body.querySelector(`#${ITEM_SECTION_ID}`) as HTMLElement | null;
+    if (!root) {
+      root = doc.createElementNS(
+        "http://www.w3.org/1999/xhtml",
+        "div",
+      ) as HTMLElement;
+      root.id = ITEM_SECTION_ID;
+      root.style.height = "100%";
+      body.appendChild(root);
+    }
+    if (root.firstChild) {
+      return;
+    }
+    const skeleton = buildSectionSkeleton(doc);
+    root.appendChild(skeleton.root);
+    this.skeleton = skeleton;
+    this.buildToolbar(doc, skeleton.toolbar);
+    ztoolkit.log("item section skeleton mounted");
+  }
 
   private buildToolbar(doc: Document, toolbar: HTMLElement): void {
     toolbar.textContent = "";

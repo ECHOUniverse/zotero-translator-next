@@ -56,7 +56,7 @@ export class ReaderModule {
 
   /** 注册阅读器侧栏区块 + 划选事件 */
   register(): void {
-    Zotero.ItemPaneManager.registerSection({
+    const paneID = Zotero.ItemPaneManager.registerSection({
       paneID: READER_PANE_ID,
       pluginID: config.addonID,
       header: {
@@ -67,43 +67,36 @@ export class ReaderModule {
         l10nID: getLocaleID("reader-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/book.svg",
       },
-      bodyXHTML: `<html:div id="${READER_SECTION_ID}"></html:div>`,
-      onInit: () => {
+      onInit: (props: any) => {
+        // Zotero 9: props 含 { paneID, doc, body }；7 可能只有 { item }
         this.wireEvents();
+        const body = props?.body;
+        if (body) {
+          // 骨架挂载不依赖 bodyXHTML/onRender 时机（bodyXHTML 注入先于 onInit）
+          this.mountSkeleton(body);
+        }
+        ztoolkit.log("reader section init", { hasBody: Boolean(body) });
       },
-      onItemChange: ({ setEnabled, tabType }) => {
-        setEnabled(tabType === "reader");
+      onItemChange: ({ setEnabled }) => {
+        // 恒启用（zotero-pdf-translate 同款做法，避免 tabType 意外值导致区块禁用）
+        setEnabled(true);
         return true;
       },
       onRender: ({ body }) => {
         const doc = body.ownerDocument!;
-        // 自愈：bodyXHTML 在部分版本解析失败时直接创建根元素
-        let root = body.querySelector(
-          `#${READER_SECTION_ID}`,
-        ) as HTMLElement | null;
-        if (!root) {
-          root = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
-          root.id = READER_SECTION_ID;
-          root.style.height = "100%";
-          body.appendChild(root);
-        }
-        // 挂载骨架（仅一次）
-        if (!root.firstChild) {
-          const skeleton = buildSectionSkeleton(doc);
-          root.appendChild(skeleton.root);
-          this.skeleton = skeleton;
-          this.buildToolbar(doc, skeleton.toolbar);
-          this.refreshView();
-        }
+        // 兜底：onInit 未挂载时（老版本无 body props）在此挂载
+        this.mountSkeleton(body);
         void this.refreshHistory(doc);
         ztoolkit.log("reader section rendered", {
           bodyChildren: body.children.length,
-          rootFound: Boolean(root),
         });
       },
     });
+    if (!paneID) {
+      ztoolkit.log("reader section registration failed");
+    }
 
-    // 划选弹层：注入"翻译"按钮
+    // 划选弹层：注入"翻译"按钮（仿 zotero-pdf-translate：div + click + preventDefault）
     Zotero.Reader.registerEventListener(
       "renderTextSelectionPopup",
       (event: any) => {
@@ -112,14 +105,16 @@ export class ReaderModule {
           const text: string = (params?.annotation?.text ?? "").trim();
           if (!text) return;
           this.translateMgr.selectedText = text;
-          this.refreshSelectionButtons(doc);
           if (getPref("translate.autoOnSelect")) {
             this.scheduleAutoTranslate();
           }
-          const btn = doc.createElementNS(XHTML_NS, "button");
+          const btn = doc.createElement("div");
           btn.className = "ztr-popup-btn";
           btn.textContent = getString("btn-translate");
-          btn.addEventListener("click", () => {
+          btn.setAttribute("tabindex", "-1");
+          btn.addEventListener("click", (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
             void this.translateSelection();
           });
           append(btn);
@@ -129,6 +124,33 @@ export class ReaderModule {
       },
       config.addonID,
     );
+  }
+
+  /** 挂载骨架（幂等：已有内容则跳过） */
+  private mountSkeleton(body: Element): void {
+    if (this.skeleton) return;
+    const doc = body.ownerDocument!;
+    let root = body.querySelector(
+      `#${READER_SECTION_ID}`,
+    ) as HTMLElement | null;
+    if (!root) {
+      root = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
+      root.id = READER_SECTION_ID;
+      root.style.height = "100%";
+      body.appendChild(root);
+    }
+    if (root.firstChild) {
+      // 已有内容（其它途径注入），跳过挂载
+      return;
+    }
+    const skeleton = buildSectionSkeleton(doc);
+    root.appendChild(skeleton.root);
+    this.skeleton = skeleton;
+    this.buildToolbar(doc, skeleton.toolbar);
+    this.refreshView();
+    ztoolkit.log("reader section skeleton mounted", {
+      rootChildren: root.children.length,
+    });
   }
 
   private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
@@ -217,12 +239,6 @@ export class ReaderModule {
         this.refreshView();
       }
     });
-  }
-
-  private refreshSelectionButtons(doc: Document): void {
-    this.doc = doc;
-    // 更新工具栏按钮可用态（阅读器区块内）
-    this.refreshView();
   }
 
   private scheduleAutoTranslate(): void {
