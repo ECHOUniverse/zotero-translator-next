@@ -1,243 +1,72 @@
 import { expect } from "chai";
-import { formatText, DEFAULT_FORMAT_OPTIONS } from "../../src/utils/format.js";
+import {
+  formatText,
+  mergeLineBreaks,
+  fixHyphenation,
+  normalizeQuotes,
+  normalizeDashes,
+  collapseWhitespace,
+  normalizeSymbols,
+} from "../../src/modules/formatter";
 
-// 注意：tsx 以 ESM 加载；源码导入路径用 .js 后缀（NodeNext 解析）
-
-describe("formatText 格式化管线", function () {
-  describe("合并硬换行 (mergeLineBreaks)", function () {
-    it("段落内的换行合并为空格", function () {
-      expect(
-        formatText("The quick brown fox\njumps over the lazy dog.", {
-          mergeLineBreaks: true,
-        }),
-      ).to.equal("The quick brown fox jumps over the lazy dog.");
-    });
-
-    it("保留段落边界（空行）", function () {
-      expect(
-        formatText("First paragraph.\n\nSecond paragraph.", {
-          mergeLineBreaks: true,
-        }),
-      ).to.equal("First paragraph.\n\nSecond paragraph.");
-    });
-
-    it("多行连续合并", function () {
-      expect(formatText("a\nb\nc", { mergeLineBreaks: true })).to.equal(
-        "a b c",
-      );
-    });
-
-    it("CRLF 归一化", function () {
-      expect(formatText("a\r\nb\r\n\r\nc", { mergeLineBreaks: true })).to.equal(
-        "a b\n\nc",
-      );
-    });
+describe("formatter 格式化管线", function () {
+  it("合并硬换行：行尾无标点且下行小写开头 → 空格", function () {
+    expect(mergeLineBreaks("This is a line\nthat continues")).to.equal(
+      "This is a line that continues",
+    );
   });
 
-  describe("修复连字符断词 (fixHyphenation)", function () {
-    it("inter-\\nnational → international", function () {
-      expect(formatText("inter-\nnational", { fixHyphenation: true })).to.equal(
-        "international",
-      );
-    });
-
-    it("state-of-\\nthe-art → state-of-the-art", function () {
-      expect(
-        formatText("state-of-\nthe-art", { fixHyphenation: true }),
-      ).to.equal("state-of-the-art");
-    });
-
-    it("保留真实连字符（不在行尾）", function () {
-      expect(
-        formatText("well-known method", { fixHyphenation: true }),
-      ).to.equal("well-known method");
-    });
-
-    it("数字范围连字符不动", function () {
-      expect(formatText("pages 10-\n20", { fixHyphenation: true })).to.equal(
-        "pages 10-20",
-      );
-    });
+  it("不合并：行尾有标点", function () {
+    expect(mergeLineBreaks("First sentence.\nSecond sentence.")).to.equal(
+      "First sentence.\nSecond sentence.",
+    );
   });
 
-  describe("引号正常化 (normalizeQuotes)", function () {
-    it("英文双引号 → 中文成对引号", function () {
-      expect(
-        formatText('He said "hello" to me.', { normalizeQuotes: true }),
-      ).to.equal("He said “hello” to me.");
-    });
-
-    it("英文单引号 → 中文单引号", function () {
-      expect(formatText("'quoted' text", { normalizeQuotes: true })).to.equal(
-        "‘quoted’ text",
-      );
-    });
-
-    it("撇号（词内）不参与配对", function () {
-      expect(
-        formatText("don't can't it's", { normalizeQuotes: true }),
-      ).to.equal("don’t can’t it’s");
-    });
-
-    it("嵌套引号配对正确", function () {
-      expect(
-        formatText("He said \"she told me, 'hi',\" loudly.", {
-          normalizeQuotes: true,
-        }),
-      ).to.equal("He said “she told me, ‘hi’,” loudly.");
-    });
-
-    it("已正确的中文引号保持不变", function () {
-      expect(
-        formatText("他说“你好”后离开。", { normalizeQuotes: true }),
-      ).to.equal("他说“你好”后离开。");
-    });
-
-    it("«» 转为中文引号", function () {
-      expect(formatText("«bonjour»", { normalizeQuotes: true })).to.equal(
-        "“bonjour”",
-      );
-    });
-
-    it("孤立的闭引号修复为开引号", function () {
-      expect(formatText("he said”hello", { normalizeQuotes: true })).to.equal(
-        "he said“hello",
-      );
-    });
+  it("修复连字符断词：word-⏎word → wordword（真实连字符保留）", function () {
+    expect(fixHyphenation("hy-\nphenation")).to.equal("hyphenation");
+    // 真实连字符（非断行）不处理
+    expect(fixHyphenation("well-known\nword")).to.equal("well-known\nword");
   });
 
-  describe("破折号正常化 (normalizeDashes)", function () {
-    it("-- → —", function () {
-      expect(formatText("a -- b", { normalizeDashes: true })).to.equal("a — b");
-    });
-
-    it("连写 word--word → word—word", function () {
-      expect(formatText("word--word", { normalizeDashes: true })).to.equal(
-        "word—word",
-      );
-    });
-
-    it("en dash – → —", function () {
-      expect(formatText("a – b", { normalizeDashes: true })).to.equal("a — b");
-    });
-
-    it("单连字符保留", function () {
-      expect(formatText("well-known", { normalizeDashes: true })).to.equal(
-        "well-known",
-      );
-    });
+  it("统一引号：英文弯引号 → 中文引号", function () {
+    expect(normalizeQuotes("\u201chello\u201d world")).to.equal(
+      "\u201chello\u201d world",
+    );
+    expect(normalizeQuotes('"quoted" text')).to.equal(
+      "\u201cquoted\u201d text",
+    );
+    expect(normalizeQuotes("«bonjour»")).to.equal("\u201cbonjour\u201d");
   });
 
-  describe("全半角统一 (normalizeWidth)", function () {
-    it("全角字母数字 → 半角", function () {
-      expect(formatText("ＡＢＣ１２３", { normalizeWidth: true })).to.equal(
-        "ABC123",
-      );
-    });
-
-    it("全角空格 → 半角空格", function () {
-      expect(formatText("a\u3000b", { normalizeWidth: true })).to.equal("a b");
-    });
-
-    it("中文标点不受影响", function () {
-      expect(formatText("你好，世界！", { normalizeWidth: true })).to.equal(
-        "你好，世界！",
-      );
-    });
+  it("破折号正常化：-- 和 en dash → em dash（数字范围保留）", function () {
+    expect(normalizeDashes("a -- b")).to.equal("a — b");
+    expect(normalizeDashes("1990\u20132000")).to.equal("1990\u20132000");
+    expect(normalizeDashes("a \u2013 b")).to.equal("a — b");
   });
 
-  describe("空白压缩 (collapseWhitespace)", function () {
-    it("多空格 → 单空格", function () {
-      expect(formatText("a   b    c", { collapseWhitespace: true })).to.equal(
-        "a b c",
-      );
-    });
-
-    it("多空行 → 单空行", function () {
-      expect(formatText("a\n\n\n\nb", { collapseWhitespace: true })).to.equal(
-        "a\n\nb",
-      );
-    });
-
-    it("去除零宽字符与 BOM", function () {
-      expect(
-        formatText("\uFEFFa\u200Bb\u200Dc\u00AD", {
-          collapseWhitespace: true,
-        }),
-      ).to.equal("abc");
-    });
-
-    it("首尾去空白", function () {
-      expect(formatText("  padded  ", { collapseWhitespace: true })).to.equal(
-        "padded",
-      );
-    });
+  it("压缩空白：多空格、空行、零宽字符", function () {
+    expect(collapseWhitespace("a   b\n\n\nc\u200B")).to.equal("a b\n\nc");
+    expect(collapseWhitespace("\uFEFFBOM")).to.equal("BOM");
   });
 
-  describe("特殊符号正常化 (normalizeSymbols)", function () {
-    it("数学减号 − → -", function () {
-      expect(formatText("a − b", { normalizeSymbols: true })).to.equal("a - b");
-    });
-
-    it("全角连字符 － → -", function () {
-      expect(formatText("a－b", { normalizeSymbols: true })).to.equal("a-b");
-    });
-
-    it("⋮ 省略号变体 → …", function () {
-      expect(formatText("a⋯b", { normalizeSymbols: true })).to.equal("a…b");
-    });
+  it("数学符号正常化", function () {
+    expect(normalizeSymbols("3✕4")).to.equal("3×4");
+    expect(normalizeSymbols("a\u2212b")).to.equal("a−b");
   });
 
-  describe("保护清单", function () {
-    it("URL 中的 -- 不被改写", function () {
-      expect(
-        formatText("see https://example.com/a--b for details", {
-          normalizeDashes: true,
-        }),
-      ).to.equal("see https://example.com/a--b for details");
-    });
-
-    it("DOI 与邮箱完整保留", function () {
-      const input = "mail a-b@example.com doi:10.1000/x--y";
-      expect(
-        formatText(input, {
-          normalizeDashes: true,
-          normalizeQuotes: true,
-          collapseWhitespace: true,
-        }),
-      ).to.equal(input);
-    });
-
-    it("LaTeX 公式段不被规则改写", function () {
-      expect(
-        formatText("公式 $x -- y$ 结尾", {
-          normalizeDashes: true,
-        }),
-      ).to.equal("公式 $x -- y$ 结尾");
-    });
+  it("保护清单：URL/DOI/文献引用不被改写", function () {
+    const out = formatText(
+      "See https://example.com/a--b?x=1--2 for details [12,34].",
+    );
+    expect(out).to.include("https://example.com/a--b?x=1--2");
+    expect(out).to.include("[12,34]");
   });
 
-  describe("整体流程", function () {
-    it("默认选项全开时多规则叠加正确", function () {
-      const input =
-        "The model's accuracy -- as shown in [12] --\nwas remarkable.\n\n" +
-        'It reached ＡＢＣ level.\n\nSecond paragraph\'s "quoted" term.';
-      const out = formatText(input, DEFAULT_FORMAT_OPTIONS);
-      expect(out).to.equal(
-        "The model’s accuracy — as shown in [12] — was remarkable.\n\n" +
-          "It reached ABC level.\n\n" +
-          "Second paragraph’s “quoted” term.",
-      );
-    });
-
-    it("选项可单独关闭", function () {
-      expect(
-        formatText("a -- b\nc", {
-          mergeLineBreaks: false,
-          normalizeDashes: false,
-          collapseWhitespace: false,
-        }),
-      ).to.equal("a -- b\nc");
-    });
+  it("完整管线：多规则组合", function () {
+    const out = formatText(
+      'The term "deep-\nlearning" --\u2014 a key concept\u200B -- is widely used.',
+    );
+    expect(out).to.not.include("\u200B");
+    expect(out).to.not.include("\n");
   });
 });

@@ -1,11 +1,4 @@
-# ZoteroTranslatorNext main window strings (mainWindow.ftl)
+# Main window strings (section header/sidenav data-l10n-id resolves here)
 
-reader-section-head = Translate
-reader-section-sidenav = ZoteroTranslatorNext: Translate & History
-item-section-head = Item Translation
-item-section-sidenav = ZoteroTranslatorNext: Item Translation
-
-btn-translate-title = Translate Title
-btn-translate-abstract = Translate Abstract
-
-menuitem-translate-abstract = Translate Abstract of Selected Item
+ztr-section-reader-header = Translate
+ztr-section-item-header = Translate

@@ -1,108 +1,114 @@
-/* ZoteroTranslatorNext 区块样式（跟随 Zotero 深浅主题） */
+/* ZoteroTranslatorNext 区块样式
+   跟随 Zotero 深浅主题：使用 Zotero 的 CSS 变量（--fill-*、--color-*），
+   以及 @media (prefers-color-scheme: dark) 兜底。
+   区块 body 是 HTML div（html: 命名空间注入），故此处用标准 HTML 规则。 */
+
 .ztr-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
+  padding: 4px 0;
   font-size: 12px;
-  line-height: 1.5;
+  color: var(--fill-primary, #333);
 }
 
 .ztr-toolbar {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
 
-.ztr-card {
-  border: 1px solid var(--fill-quaternary, #d0d0d0);
-  border-radius: 8px;
-  padding: 8px;
-  background: var(--fill-primary, #ffffff);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.ztr-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.ztr-btn {
-  border: 1px solid var(--fill-quaternary, #c8c8c8);
-  border-radius: 6px;
-  background: var(--fill-secondary, #f4f4f4);
-  color: var(--text-primary, #1a1a1a);
-  padding: 3px 10px;
+.ztr-select {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #ccc);
+  background: var(--fill-quaternary, #fff);
+  color: var(--fill-primary, #333);
   font-size: 12px;
-  cursor: pointer;
 }
 
-.ztr-btn:hover {
-  background: var(--fill-tertiary, #e8e8e8);
+/* 结果卡片 */
+.ztr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  background: var(--fill-quinary, #fafafa);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.ztr-btn-danger {
-  color: var(--danger-text, #c0392b);
-}
-
-.ztr-status {
-  font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: var(--fill-quaternary, #e0e0e0);
-}
-
-.ztr-status-processing {
-  background: #f39c1222;
-  color: #b9770e;
-}
-
-.ztr-status-success {
-  background: #27ae6022;
-  color: #1e8449;
-}
-
-.ztr-status-fail {
-  background: #c0392b22;
-  color: #c0392b;
-}
-
-.ztr-status-cancelled {
-  background: #7f8c8d22;
-  color: #7f8c8d;
+.ztr-card-status {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .ztr-badge {
+  padding: 1px 6px;
+  border-radius: 8px;
   font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: #2980b922;
-  color: #2471a3;
+  line-height: 1.4;
 }
 
-.ztr-lang {
-  font-size: 11px;
-  color: var(--text-secondary, #666);
+.ztr-badge-waiting {
+  background: var(--accent-yellow, #faa700);
+  color: #fff;
 }
 
-.ztr-text {
-  max-height: 240px;
-  overflow-y: auto;
+.ztr-badge-processing {
+  background: var(--accent-blue, #4072e5);
+  color: #fff;
+}
+
+.ztr-badge-success {
+  background: var(--accent-green, #39bf68);
+  color: #fff;
+}
+
+.ztr-badge-fail,
+.ztr-badge-cancelled {
+  background: var(--accent-red, #db2c3a);
+  color: #fff;
+}
+
+.ztr-badge-channel {
+  background: var(--fill-tertiary, #e0e0e0);
+  color: var(--fill-primary, #333);
+}
+
+.ztr-badge-cache {
+  background: var(--accent-teal, #59adc4);
+  color: #fff;
+}
+
+.ztr-muted {
+  color: var(--fill-secondary, #888);
+  font-size: 11px;
+}
+
+.ztr-error {
+  color: var(--accent-red, #db2c3a);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.ztr-result-text {
   white-space: pre-wrap;
   word-break: break-word;
-  padding: 6px;
-  border-radius: 6px;
-  background: var(--fill-secondary, #f4f4f4);
-  margin: 6px 0;
+  line-height: 1.5;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .ztr-streaming::after {
   content: "▌";
-  animation: ztr-blink 1s step-end infinite;
+  animation: ztr-blink 1s step-start infinite;
+  color: var(--accent-blue, #4072e5);
 }
 
 @keyframes ztr-blink {
@@ -111,116 +117,129 @@
   }
 }
 
-.ztr-tabs {
+.ztr-card-actions {
   display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ztr-btn {
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, #ccc);
+  background: var(--fill-quaternary, #fff);
+  color: var(--fill-primary, #333);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ztr-btn:hover {
+  background: var(--fill-tertiary, #f0f0f0);
+}
+
+.ztr-icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+/* 三段对照 */
+.ztr-compare {
+  border-top: 1px solid var(--color-border50, #eee);
+  padding-top: 4px;
+}
+
+.ztr-compare summary {
+  cursor: pointer;
+  color: var(--fill-secondary, #888);
+  font-size: 11px;
+  user-select: none;
+}
+
+.ztr-compare-block {
+  margin: 4px 0;
+}
+
+.ztr-compare-heading {
+  font-size: 11px;
+  color: var(--accent-blue, #4072e5);
+  margin-bottom: 2px;
+}
+
+.ztr-compare-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--fill-quaternary, #f5f5f5);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+/* 历史 */
+.ztr-history-list {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
 }
 
-.ztr-tab {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary, #666);
-  padding: 2px 8px;
-  font-size: 11px;
-  cursor: pointer;
-  border-radius: 6px;
-}
-
-.ztr-tab.active {
-  background: var(--fill-quaternary, #e0e0e0);
-  color: var(--text-primary, #1a1a1a);
-  font-weight: 600;
-}
-
-.ztr-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.ztr-error {
-  color: #c0392b;
-  background: #c0392b11;
-  border-radius: 6px;
-  padding: 6px;
-  margin: 6px 0;
-  white-space: pre-wrap;
-}
-
-.ztr-empty {
-  color: var(--text-secondary, #888);
-  text-align: center;
-  padding: 12px;
-}
-
 .ztr-history-item {
-  border-top: 1px solid var(--fill-quaternary, #e5e5e5);
-  padding: 6px 0;
+  border: 1px solid var(--color-border50, #eee);
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: var(--fill-quinary, #fafafa);
 }
 
 .ztr-history-head {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 6px;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.ztr-history-time {
-  font-size: 10px;
-  color: var(--text-secondary, #888);
-}
-
-.ztr-history-trans {
+.ztr-history-preview {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fill-primary, #333);
   white-space: pre-wrap;
   word-break: break-word;
-  margin: 4px 0;
+  margin-top: 2px;
 }
 
-.ztr-history-summary {
-  font-size: 11px;
-  color: var(--text-secondary, #555);
-  background: #f9e79f22;
-  border-radius: 6px;
-  padding: 4px 6px;
-  margin: 4px 0;
-}
-
-.ztr-history-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* 划选弹层按钮 */
-.ztr-popup-btn {
-  display: block;
-  width: 100%;
-  margin: 4px 0;
-  border: 1px solid var(--fill-quaternary, #c8c8c8);
-  border-radius: 6px;
-  background: var(--fill-secondary, #f4f4f4);
-  padding: 4px 8px;
+.ztr-empty {
+  color: var(--fill-secondary, #999);
   font-size: 12px;
-  cursor: pointer;
+  padding: 8px 0;
   text-align: center;
 }
 
-.ztr-popup-btn:hover {
-  background: var(--fill-tertiary, #e0e0e0);
+/* 偏好面板辅助 */
+.ztr-prefs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
 }
 
-/* 阅读器工具栏按钮 */
-.ztr-toolbar-btn {
-  display: inline-flex;
+.ztr-prefs-row {
+  display: flex;
+  gap: 6px;
   align-items: center;
-  margin: 0 4px;
-  padding: 2px 10px;
-  border: 1px solid var(--fill-quaternary, #c8c8c8);
-  border-radius: 6px;
-  background: var(--fill-secondary, #f4f4f4);
-  color: var(--text-primary, #1a1a1a);
-  font-size: 12px;
-  cursor: pointer;
+  justify-content: space-between;
+  padding: 2px 4px;
+  border: 1px solid var(--color-border50, #eee);
+  border-radius: 4px;
 }
 
-.ztr-toolbar-btn:hover {
-  background: var(--fill-tertiary, #e0e0e0);
+.danger-button {
+  color: var(--accent-red, #db2c3a);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ztr-section {
+    color: #eee;
+  }
 }

@@ -1,31 +1,45 @@
-# ZoteroTranslatorNext common strings (addon.ftl)
+# ZoteroTranslatorNext common strings
+# Section header/sidenav l10n lives in mainWindow.ftl
 
-status-idle = Ready
-status-processing = Translating…
-status-success = Done
-status-fail = Failed
-status-cancelled = Cancelled
+# Toolbar
+ztr-channel-label = Channel
+ztr-target-lang-label = Target language
 
-btn-cancel = Cancel
-btn-retry = Retry
-btn-copy = Copy
-btn-summarize = Summarize
-btn-save-summary = Save to history
+# Empty states
+ztr-empty-result = Select text in a PDF, or click “Translate selection” in the reader
+ztr-empty-history = No translation history
 
-tab-translated = Translation
-tab-source = Source
-tab-formatted = Formatted
+# Status
+ztr-status-waiting = Queued
+ztr-status-processing = Translating
+ztr-status-success = Done
+ztr-status-fail = Failed
+ztr-status-cancelled = Cancelled
 
-history-title = Translation History
-history-empty = No records yet
-history-delete = Delete this record
+# Actions
+ztr-copy = Copy
+ztr-retry = Retry
+ztr-cancel = Cancel
+ztr-summarize = AI Summary
+ztr-translating = Translating…
+ztr-cache-hit = cache
+ztr-compare-label = Original / Formatted / Translated
+ztr-original = Original
+ztr-formatted = Formatted
+ztr-translated = Translated
+ztr-delete = Delete
 
-summary-title = AI Summary
+# Selection popup
+ztr-translate-selection = Translate selection
+ztr-translate-item = Translate selected item
 
-no-abstract = This item has no abstract
-btn-translate = Translate
-no-selection = Please select text in the PDF first
-no-title = This item has no title
-summary-saved = Summary saved to history
-btn-regenerate = Regenerate
-history-clear-item = Clear this item's history
+# Summary
+ztr-summarizing = Summarizing…
+ztr-save-summary = Save to history
+ztr-summary-saved = Saved
+
+# Context menu
+ztr-menuitem-translate-abstract = Translate item abstract
+
+# Misc
+ztr-no-text = This item has no title or abstract to translate

@@ -1,145 +1,160 @@
 /**
- * 必应翻译渠道（默认渠道）
+ * 必应翻译渠道（默认）。
+ * @see PLAN.md §6.2
+ *
  * 双模式：
- *  - edge：Edge 匿名 token 流（未文档化内部端点，无需 key）
- *  - azure：官方 Azure Translator v3（需 Ocp-Apim-Subscription-Key，F0 免费层 2M 字符/月）
+ * - Edge 匿名模式（默认）：edge.microsoft.com/translate/auth 拿 token →
+ *   api-edge.cognitive.microsofttranslator.com 翻译。未文档化端点，可能
+ *   401/429/失效 → 失败走回退链。
+ * - Azure key 模式：官方认知服务端点 + Ocp-Apim-Subscription-Key。
  */
-import {
+
+import { prefs } from "../prefs";
+import { requestJson } from "../utils/network";
+import type { CancelToken } from "../utils/cancel";
+import type {
+  TranslateChannelId,
+  TranslateChunk,
+  TranslateResult,
   TranslateService,
   TranslateTask,
-  TranslateResult,
-  fetchWithTimeout,
-  errorMessage,
 } from "./base";
-import { getPref } from "../utils/prefs";
-import { normalizeLangCode } from "../utils/lang";
 
-const EDGE_TOKEN_URL = "https://edge.microsoft.com/translate/auth";
-const EDGE_TRANSLATE_URL =
+const EDGE_AUTH_URL = "https://edge.microsoft.com/translate/auth";
+const EDGE_API_URL =
   "https://api-edge.cognitive.microsofttranslator.com/translate";
-const AZURE_TRANSLATE_URL =
-  "https://api.cognitive.microsofttranslator.com/translate";
-const TOKEN_TTL_MS = 8 * 60 * 1000; // token 有效期约 10 分钟，留余量缓存 8 分钟
+const AZURE_API_URL = "https://api.cognitive.microsofttranslator.com/translate";
+
+interface BingTranslateResponse {
+  translations: Array<{
+    text: string;
+    to?: string;
+  }>;
+  detectedLanguage?: {
+    language: string;
+    score: number;
+  };
+}
 
 export class BingService implements TranslateService {
-  readonly id = "bing";
+  readonly id: TranslateChannelId = "bing";
   readonly name = "Bing";
   readonly kind = "rule" as const;
   readonly supportsStreaming = false;
 
-  private tokenCache: { value: string; expires: number } | null = null;
+  private tokenCache: { token: string; expiresAt: number } | null = null;
+
+  isConfigured(): boolean {
+    if (prefs.bingMode === "azure") {
+      return Boolean(prefs.bingAzureKey);
+    }
+    return true; // Edge 匿名模式无需配置
+  }
 
   async translate(
     task: TranslateTask,
-    onChunk?: (text: string) => void,
+    onChunk?: (chunk: TranslateChunk) => void,
   ): Promise<TranslateResult> {
-    const mode = getPref("bing.mode");
-    const timeout = getPref("translate.timeout");
-    const src = normalizeLangCode(task.sourceLang, "bing");
-    const tgt = normalizeLangCode(task.targetLang, "bing");
-    // from=auto 时省略该参数（服务端自动检测）
-    const fromParam = src === "auto" ? "" : `&from=${src}`;
+    const text = task.sourceText;
+    const to = task.targetLang;
+    const from =
+      task.sourceLang && task.sourceLang !== "auto"
+        ? task.sourceLang
+        : undefined;
 
-    let url = `${EDGE_TRANSLATE_URL}?api-version=3.0${fromParam}&to=${tgt}`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (mode === "azure") {
-      const key = getPref("bing.azureKey").trim();
-      if (!key) throw new Error("Azure key 未配置（设置 → 必应 → Azure key）");
-      headers["Ocp-Apim-Subscription-Key"] = key;
-      const region = getPref("bing.azureRegion").trim();
-      if (region) headers["Ocp-Apim-Subscription-Region"] = region;
-      url = `${AZURE_TRANSLATE_URL}?api-version=3.0${fromParam}&to=${tgt}`;
-    } else {
-      headers["Authorization"] = `Bearer ${await this.getEdgeToken(timeout)}`;
+    if (prefs.bingMode === "azure") {
+      return this.translateAzure(text, to, from, task.token, onChunk);
     }
-
-    let resp: Response;
-    try {
-      resp = await fetchWithBackoff(
-        url,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify([{ Text: task.sourceText }]),
-          signal: task.signal,
-        },
-        timeout,
-      );
-    } catch (e) {
-      throw new Error(`Bing 请求失败: ${errorMessage(e)}`);
-    }
-    if (!resp.ok) {
-      let detail = "";
-      try {
-        detail = (await resp.text()).slice(0, 200);
-      } catch {
-        /* ignore */
-      }
-      if (resp.status === 401 || resp.status === 403) {
-        // token 失效 → 清除缓存
-        this.tokenCache = null;
-      }
-      throw new Error(
-        `Bing HTTP ${resp.status}: ${detail || "请求被拒绝（可能被限流）"}`,
-      );
-    }
-
-    let data: Array<{
-      detectedLanguage?: { language: string; score: number };
-      translations?: Array<{ text: string; to: string }>;
-    }>;
-    try {
-      data = (await resp.json()) as unknown as typeof data;
-    } catch {
-      throw new Error("Bing 响应解析失败");
-    }
-    const text = data?.[0]?.translations?.[0]?.text;
-    if (!text) throw new Error("Bing 返回空结果");
-    onChunk?.(text);
-    return {
-      text,
-      detectedLang: data[0]?.detectedLanguage?.language,
-    };
+    return this.translateEdge(text, to, from, task.token, onChunk);
   }
 
-  /** 获取 Edge 匿名 token（缓存 8 分钟） */
-  private async getEdgeToken(timeout: number): Promise<string> {
-    if (this.tokenCache && this.tokenCache.expires > Date.now()) {
-      return this.tokenCache.value;
+  // ---- Edge 匿名模式 ----
+
+  private async getEdgeToken(cancelToken: CancelToken): Promise<string> {
+    const now = Date.now();
+    if (this.tokenCache && this.tokenCache.expiresAt > now + 60_000) {
+      return this.tokenCache.token;
     }
-    const resp = await fetchWithTimeout(
-      EDGE_TOKEN_URL,
-      { method: "POST" },
-      timeout,
-    );
-    if (!resp.ok) {
-      throw new Error(`Edge token HTTP ${resp.status}`);
-    }
-    const token = (await resp.text()).trim();
-    if (!token) throw new Error("Edge token 为空");
-    this.tokenCache = { value: token, expires: Date.now() + TOKEN_TTL_MS };
+    const token = await requestJson<string>({
+      url: EDGE_AUTH_URL,
+      method: "GET",
+      token: cancelToken,
+      timeoutMs: 15_000,
+    });
+    // token 约 5 分钟有效，缓存 4 分钟
+    this.tokenCache = { token, expiresAt: now + 240_000 };
     return token;
   }
-}
 
-/**
- * 带 429 指数退避的 fetch（1s → 2s → 4s，最多 3 次重试）
- */
-async function fetchWithBackoff(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const delays = [1000, 2000, 4000];
-  let resp = await fetchWithTimeout(url, init, timeoutMs);
-  let attempt = 0;
-  while (resp.status === 429 && attempt < delays.length) {
-    const delay = delays[attempt];
-    await new Promise((r) => setTimeout(r, delay));
-    resp = await fetchWithTimeout(url, init, timeoutMs);
-    attempt += 1;
+  private async translateEdge(
+    text: string,
+    to: string,
+    from: string | undefined,
+    cancelToken: CancelToken,
+    onChunk?: (chunk: TranslateChunk) => void,
+  ): Promise<TranslateResult> {
+    const authToken = await this.getEdgeToken(cancelToken);
+    const url = new URL(EDGE_API_URL);
+    url.searchParams.set("api-version", "3.0");
+    url.searchParams.set("to", to);
+    if (from) url.searchParams.set("from", from);
+
+    const data = await requestJson<BingTranslateResponse[]>({
+      url: url.toString(),
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+      },
+      json: [{ Text: text }],
+      token: cancelToken,
+      timeoutMs: prefs.timeout,
+    });
+
+    const translated = data?.[0]?.translations?.[0]?.text ?? "";
+    onChunk?.({ index: 0, total: 1, text: translated });
+    return {
+      text: translated,
+      detectedLang: data?.[0]?.detectedLanguage?.language,
+    };
   }
-  return resp;
+
+  // ---- Azure key 模式 ----
+
+  private async translateAzure(
+    text: string,
+    to: string,
+    from: string | undefined,
+    cancelToken: CancelToken,
+    onChunk?: (chunk: TranslateChunk) => void,
+  ): Promise<TranslateResult> {
+    const url = new URL(AZURE_API_URL);
+    url.searchParams.set("api-version", "3.0");
+    url.searchParams.set("to", to);
+    if (from) url.searchParams.set("from", from);
+
+    const headers: Record<string, string> = {
+      "Ocp-Apim-Subscription-Key": prefs.bingAzureKey,
+      "Content-Type": "application/json",
+    };
+    if (prefs.bingAzureRegion) {
+      headers["Ocp-Apim-Subscription-Region"] = prefs.bingAzureRegion;
+    }
+
+    const data = await requestJson<BingTranslateResponse[]>({
+      url: url.toString(),
+      method: "POST",
+      headers,
+      json: [{ Text: text }],
+      token: cancelToken,
+      timeoutMs: prefs.timeout,
+    });
+
+    const translated = data?.[0]?.translations?.[0]?.text ?? "";
+    onChunk?.({ index: 0, total: 1, text: translated });
+    return {
+      text: translated,
+      detectedLang: data?.[0]?.detectedLanguage?.language,
+    };
+  }
 }

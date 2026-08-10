@@ -1,5 +1,4 @@
 import { config } from "../../package.json";
-import { FluentMessageId } from "../../typings/i10n";
 
 export { initLocale, getString, getLocaleID };
 
@@ -18,32 +17,15 @@ function initLocale() {
 }
 
 /**
- * Get locale string, see https://firefox-source-docs.mozilla.org/l10n/fluent/tutorial.html#fluent-translation-list-ftl
- * @param localString ftl key
- * @param options.branch branch name
- * @param options.args args
- * @example
- * ```ftl
- * # addon.ftl
- * addon-static-example = This is default branch!
- *     .branch-example = This is a branch under addon-static-example!
- * addon-dynamic-example =
-    { $count ->
-        [one] I have { $count } apple
-       *[other] I have { $count } apples
-    }
- * ```
- * ```js
- * getString("addon-static-example"); // This is default branch!
- * getString("addon-static-example", { branch: "branch-example" }); // This is a branch under addon-static-example!
- * getString("addon-dynamic-example", { args: { count: 1 } }); // I have 1 apple
- * getString("addon-dynamic-example", { args: { count: 2 } }); // I have 2 apples
- * ```
+ * Get locale string（自动加 addonRef 前缀，scaffold 构建时消息名已加前缀）
+ * @param localString ftl key（不带前缀）
+ * @param options.branch attribute 名
+ * @param options.args 插值参数
  */
-function getString(localString: FluentMessageId): string;
-function getString(localString: FluentMessageId, branch: string): string;
+function getString(localString: string): string;
+function getString(localString: string, branch: string): string;
 function getString(
-  localeString: FluentMessageId,
+  localeString: string,
   options: { branch?: string | undefined; args?: Record<string, unknown> },
 ): string;
 function getString(...inputs: any[]) {
@@ -60,37 +42,31 @@ function getString(...inputs: any[]) {
   }
 }
 
-interface Pattern {
-  value: string | null;
-  attributes: Array<{
-    name: string;
-    value: string;
-  }> | null;
-}
-
 function _getString(
-  localeString: FluentMessageId,
+  localeString: string,
   options: { branch?: string | undefined; args?: Record<string, unknown> } = {},
 ): string {
   const localStringWithPrefix = `${config.addonRef}-${localeString}`;
   const { branch, args } = options;
   const pattern = addon.data.locale?.current.formatMessagesSync([
     { id: localStringWithPrefix, args },
-  ])[0] as Pattern;
-
+  ])[0];
   if (!pattern) {
     return localStringWithPrefix;
   }
   if (branch && pattern.attributes) {
-    return (
-      pattern.attributes.find((attr) => attr.name === branch)?.value ||
-      localStringWithPrefix
-    );
+    for (const attr of pattern.attributes) {
+      if (attr.name === branch) {
+        return attr.value;
+      }
+    }
+    return pattern.attributes[branch] || localStringWithPrefix;
   } else {
     return pattern.value || localStringWithPrefix;
   }
 }
 
-function getLocaleID(id: FluentMessageId) {
+/** 动态 l10n-id（data-l10n-id / setAttributes 用，带 addonRef 前缀） */
+function getLocaleID(id: string) {
   return `${config.addonRef}-${id}`;
 }

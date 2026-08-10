@@ -1,7 +1,8 @@
 import { config } from "../package.json";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
-import { TranslateManager } from "./modules/translate";
+import { TranslateManager } from "./modules/tasks";
+import { SummaryManager } from "./modules/summary";
 import { ReaderModule } from "./modules/reader";
 import { ItemPaneModule } from "./modules/itemPane";
 
@@ -9,30 +10,27 @@ class Addon {
   public data: {
     alive: boolean;
     config: typeof config;
-    // Env type, see build.js
     env: "development" | "production";
     initialized?: boolean;
     ztoolkit: ZToolkit;
     locale?: {
       current: any;
     };
-    /** 翻译管线 */
+    /** 翻译管线（队列 + 取消 + 状态机） */
     translate: TranslateManager;
-    /** 阅读器区块模块 */
+    /** AI 总结 */
+    summary: SummaryManager;
+    /** 阅读器输入源 */
     reader: ReaderModule;
-    /** 条目面板区块模块 */
+    /** 条目面板输入源 */
     itemPane: ItemPaneModule;
-    prefs?: {
-      window: Window;
-    };
   };
-  // Lifecycle hooks
   public hooks: typeof hooks;
-  // APIs
   public api: object;
 
   constructor() {
     const translate = new TranslateManager();
+    const summary = new SummaryManager();
     this.data = {
       alive: true,
       config,
@@ -40,7 +38,8 @@ class Addon {
       initialized: false,
       ztoolkit: createZToolkit(),
       translate,
-      reader: new ReaderModule(translate),
+      summary,
+      reader: new ReaderModule(translate, summary),
       itemPane: new ItemPaneModule(translate),
     };
     this.hooks = hooks;

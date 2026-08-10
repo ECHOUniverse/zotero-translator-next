@@ -1,15 +1,18 @@
 /**
- * 翻译历史（Zotero 主库自定义表）
- * 说明：方案原计划用 Zotero.DataAccessObject，但该 API 在 zotero-types 与
- * Zotero 9 源码中均不可验证，改用官方稳定且带类型的 Zotero.DB 直接建表/查询，
- * 同样满足"数据库自定义表 + 缓存复用 + 容量清理"的意图。
+ * 翻译历史：Zotero.DB 自定义表（PLAN §5 实施偏差：DataAccessObject 不可验证，
+ * 改用官方稳定且有类型的 Zotero.DB）。
+ *
+ * 表 translation_history：
+ * - sourceHash = FNV-1a64(格式化后文本)，缓存查询索引
+ * - 缓存命中：精确匹配 (engine, targetLang, sourceHash)
+ * - 容量：默认 500 条，超限清理最旧
+ * - 删除：单条 / 按条目 / 清空
  */
+
 import { fnv1a64 } from "../utils/hash";
-import { getPref } from "../utils/prefs";
+import type { TranslateChannelId } from "../services/base";
 
-const TABLE = "translation_history";
-
-export interface HistoryRecord {
+export interface HistoryEntry {
   id: number;
   itemID: number | null;
   sourceHash: string;
@@ -19,154 +22,147 @@ export interface HistoryRecord {
   summary: string | null;
   sourceLang: string;
   targetLang: string;
-  engine: string;
+  engine: TranslateChannelId;
   createdAt: number;
 }
 
-export type NewHistoryRecord = Omit<
-  HistoryRecord,
-  "id" | "createdAt" | "sourceHash"
-> & { createdAt?: number };
+const TABLE = "translation_history";
+const SCHEMA = `CREATE TABLE IF NOT EXISTS ${TABLE} (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  itemID        INTEGER,
+  sourceHash    TEXT NOT NULL,
+  sourceText    TEXT NOT NULL,
+  formattedText TEXT,
+  translatedText TEXT NOT NULL,
+  summary       TEXT,
+  sourceLang    TEXT DEFAULT 'auto',
+  targetLang    TEXT DEFAULT 'zh-CN',
+  engine        TEXT NOT NULL,
+  createdAt     INTEGER NOT NULL
+)`;
+const INDEXES = [
+  `CREATE INDEX IF NOT EXISTS idx_history_item ON ${TABLE} (itemID)`,
+  `CREATE INDEX IF NOT EXISTS idx_history_created ON ${TABLE} (createdAt)`,
+  `CREATE INDEX IF NOT EXISTS idx_history_cache ON ${TABLE} (engine, targetLang, sourceHash)`,
+];
 
 export function hashSource(text: string): string {
   return fnv1a64(text);
 }
 
-/** 建表（启动时调用；幂等） */
+let initialized = false;
+
+/** 建表（幂等；startup 时调用） */
 export async function ensureHistoryTable(): Promise<void> {
-  if (await Zotero.DB.tableExists(TABLE)) return;
+  if (initialized) return;
   await Zotero.DB.executeTransaction(async () => {
-    await Zotero.DB.queryAsync(
-      `CREATE TABLE IF NOT EXISTS ${TABLE} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        itemID INTEGER,
-        sourceHash TEXT NOT NULL,
-        sourceText TEXT NOT NULL,
-        formattedText TEXT,
-        translatedText TEXT NOT NULL,
-        summary TEXT,
-        sourceLang TEXT DEFAULT 'auto',
-        targetLang TEXT DEFAULT 'zh-CN',
-        engine TEXT NOT NULL,
-        createdAt INTEGER NOT NULL
-      )`,
-    );
-    await Zotero.DB.queryAsync(
-      `CREATE INDEX IF NOT EXISTS idx_${TABLE}_item ON ${TABLE} (itemID)`,
-    );
-    await Zotero.DB.queryAsync(
-      `CREATE INDEX IF NOT EXISTS idx_${TABLE}_created ON ${TABLE} (createdAt)`,
-    );
-    await Zotero.DB.queryAsync(
-      `CREATE INDEX IF NOT EXISTS idx_${TABLE}_cache ON ${TABLE} (sourceHash, targetLang, engine)`,
-    );
+    await Zotero.DB.queryAsync(SCHEMA);
+    for (const sql of INDEXES) {
+      await Zotero.DB.queryAsync(sql);
+    }
   });
+  initialized = true;
 }
 
-function rowToRecord(row: any): HistoryRecord {
-  return {
-    id: Number(row.id),
-    itemID: row.itemID == null ? null : Number(row.itemID),
-    sourceHash: String(row.sourceHash),
-    sourceText: String(row.sourceText),
-    formattedText: row.formattedText == null ? null : String(row.formattedText),
-    translatedText: String(row.translatedText),
-    summary: row.summary == null ? null : String(row.summary),
-    sourceLang: String(row.sourceLang),
-    targetLang: String(row.targetLang),
-    engine: String(row.engine),
-    createdAt: Number(row.createdAt),
-  };
-}
-
-/** 新增历史记录，返回 id；插入后执行容量清理
- * @param rec 记录字段
- * @param sourceHashOverride 缓存键覆盖（默认 hash 原始文本；
- *        翻译管线传入格式化后文本的 hash，保证与缓存查询键一致）
- */
+/** 插入历史记录，返回新行 id */
 export async function addHistory(
-  rec: NewHistoryRecord,
-  sourceHashOverride?: string,
+  entry: Omit<HistoryEntry, "id" | "createdAt">,
 ): Promise<number> {
-  const createdAt = rec.createdAt ?? Date.now();
-  const sourceHash = sourceHashOverride ?? hashSource(rec.sourceText);
+  const createdAt = Date.now();
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(
       `INSERT INTO ${TABLE}
-        (itemID, sourceHash, sourceText, formattedText, translatedText, summary,
-         sourceLang, targetLang, engine, createdAt)
+        (itemID, sourceHash, sourceText, formattedText, translatedText,
+         summary, sourceLang, targetLang, engine, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        rec.itemID ?? null,
-        sourceHash,
-        rec.sourceText,
-        rec.formattedText ?? null,
-        rec.translatedText,
-        rec.summary ?? null,
-        rec.sourceLang,
-        rec.targetLang,
-        rec.engine,
+        entry.itemID ?? null,
+        entry.sourceHash,
+        entry.sourceText,
+        entry.formattedText ?? null,
+        entry.translatedText,
+        entry.summary ?? null,
+        entry.sourceLang,
+        entry.targetLang,
+        entry.engine,
         createdAt,
       ],
     );
+    // 容量清理：超限删除最旧
+    await trimHistory();
   });
-  const max = getPref("historyCapacity");
-  if (max > 0) await enforceCapacity(max);
-  // 事务内取最后插入 id（避免 createdAt 毫秒级碰撞）
-  const row = (await Zotero.DB.rowQueryAsync(
-    `SELECT id FROM ${TABLE} ORDER BY id DESC LIMIT 1`,
-  )) as { id: number } | false;
-  return row ? Number(row.id) : -1;
+  return createdAt;
 }
 
-/**
- * 缓存命中查询：相同（原文 hash + 目标语言）在任一已启用渠道下命中即返回。
- * @param engines 当前渠道 id 列表（按回退顺序）
- */
-export async function findCache(
+/** 容量清理（事务内调用） */
+async function trimHistory(): Promise<void> {
+  const capacity = Zotero.Prefs.get(
+    "extensions.zotero.zotero-translator-next.historyCapacity",
+    true,
+  ) as number;
+  if (!capacity || capacity <= 0) return;
+  await Zotero.DB.queryAsync(
+    `DELETE FROM ${TABLE}
+     WHERE id IN (
+       SELECT id FROM ${TABLE}
+       ORDER BY createdAt DESC
+       LIMIT -1 OFFSET ?
+     )`,
+    [capacity],
+  );
+}
+
+/** 缓存查询：精确命中返回历史译文 */
+export async function queryCache(
   sourceHash: string,
   targetLang: string,
-  engines: string[],
-): Promise<HistoryRecord | null> {
-  if (engines.length === 0) return null;
-  const placeholders = engines.map(() => "?").join(",");
+  engine: TranslateChannelId,
+): Promise<HistoryEntry | null> {
+  const row = await Zotero.DB.rowQueryAsync(
+    `SELECT * FROM ${TABLE}
+     WHERE engine = ? AND targetLang = ? AND sourceHash = ?
+     ORDER BY createdAt DESC LIMIT 1`,
+    [engine, targetLang, sourceHash],
+  );
+  return row ? (row as HistoryEntry) : null;
+}
+
+/** 按条目查询历史（最新在前） */
+export async function getHistoryByItem(
+  itemID: number,
+  limit = 50,
+): Promise<HistoryEntry[]> {
   const rows = await Zotero.DB.queryAsync(
     `SELECT * FROM ${TABLE}
-     WHERE sourceHash = ? AND targetLang = ? AND engine IN (${placeholders})
-     ORDER BY id DESC LIMIT 1`,
-    [sourceHash, targetLang, ...engines],
+     WHERE itemID = ?
+     ORDER BY createdAt DESC LIMIT ?`,
+    [itemID, limit],
   );
-  if (!rows || rows.length === 0) return null;
-  return rowToRecord(rows[0]);
+  return (rows ?? []) as HistoryEntry[];
 }
 
-export interface ListOptions {
-  itemID?: number;
-  limit?: number;
-  offset?: number;
-}
-
-/** 历史列表（按时间倒序） */
-export async function listHistory(
-  opts: ListOptions = {},
-): Promise<HistoryRecord[]> {
-  const conds: string[] = [];
-  const params: unknown[] = [];
-  if (opts.itemID != null) {
-    conds.push("itemID = ?");
-    params.push(opts.itemID);
-  }
-  const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-  const limit = opts.limit ? `LIMIT ${Number(opts.limit)}` : "";
-  const offset = opts.offset ? `OFFSET ${Number(opts.offset)}` : "";
+/** 全局历史（最新在前，分页） */
+export async function getHistory(
+  offset = 0,
+  limit = 50,
+): Promise<HistoryEntry[]> {
   const rows = await Zotero.DB.queryAsync(
-    `SELECT * FROM ${TABLE} ${where} ORDER BY createdAt DESC ${limit} ${offset}`,
-    params,
+    `SELECT * FROM ${TABLE}
+     ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+    [limit, offset],
   );
-  return (rows ?? []).map(rowToRecord);
+  return (rows ?? []) as HistoryEntry[];
 }
 
-/** 单条删除 */
+/** 历史总数 */
+export async function getHistoryCount(): Promise<number> {
+  const value = await Zotero.DB.valueQueryAsync<number>(
+    `SELECT COUNT(*) FROM ${TABLE}`,
+  );
+  return Number(value ?? 0);
+}
+
+/** 删除单条 */
 export async function deleteHistory(id: number): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE id = ?`, [id]);
@@ -174,7 +170,7 @@ export async function deleteHistory(id: number): Promise<void> {
 }
 
 /** 按条目删除 */
-export async function deleteByItem(itemID: number): Promise<void> {
+export async function deleteHistoryByItem(itemID: number): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID = ?`, [
       itemID,
@@ -183,30 +179,10 @@ export async function deleteByItem(itemID: number): Promise<void> {
 }
 
 /** 清空全部 */
-export async function clearAllHistory(): Promise<void> {
+export async function clearHistory(): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
     await Zotero.DB.queryAsync(`DELETE FROM ${TABLE}`);
   });
-}
-
-/** 容量清理：删除最旧的超出部分，返回删除条数 */
-export async function enforceCapacity(max: number): Promise<number> {
-  if (max <= 0) return 0;
-  const count = await Zotero.DB.valueQueryAsync<number>(
-    `SELECT COUNT(*) FROM ${TABLE}`,
-  );
-  const total = Number(count ?? 0);
-  if (total <= max) return 0;
-  const toDelete = total - max;
-  await Zotero.DB.executeTransaction(async () => {
-    await Zotero.DB.queryAsync(
-      `DELETE FROM ${TABLE} WHERE id IN (
-         SELECT id FROM ${TABLE} ORDER BY createdAt ASC, id ASC LIMIT ?
-       )`,
-      [toDelete],
-    );
-  });
-  return toDelete;
 }
 
 /** 更新总结 */

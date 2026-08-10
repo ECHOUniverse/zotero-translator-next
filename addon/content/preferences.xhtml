@@ -4,179 +4,160 @@
 <groupbox
   onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
 >
-  <label><html:h2 data-l10n-id="pref-title"></html:h2></label>
-
-  <!-- 渠道 -->
-  <html:h3 data-l10n-id="pref-channels"></html:h3>
-  <vbox>
-    <html:label data-l10n-id="pref-channels-order"></html:label>
-    <html:input
-      type="text"
-      id="zotero-prefpane-__addonRef__-channels-order"
-      style="width: 100%"
-    ></html:input>
-  </vbox>
-  <checkbox preference="bing.enabled" data-l10n-id="pref-bing-enabled" />
-  <hbox align="center">
-    <html:label data-l10n-id="pref-bing-mode"></html:label>
-    <html:select preference="bing.mode">
-      <html:option
-        value="edge"
-        data-l10n-id="pref-bing-mode-edge"
-      ></html:option>
-      <html:option
-        value="azure"
-        data-l10n-id="pref-bing-mode-azure"
-      ></html:option>
-    </html:select>
-  </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-bing-azure-key"></html:label>
-    <html:input
-      type="text"
-      preference="bing.azureKey"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-bing-azure-region"></html:label>
-    <html:input
-      type="text"
-      preference="bing.azureRegion"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-
-  <checkbox
-    preference="deepseek.enabled"
-    data-l10n-id="pref-deepseek-enabled"
-  />
-  <hbox align="center">
-    <html:label data-l10n-id="pref-deepseek-key"></html:label>
-    <html:input
-      type="text"
-      preference="deepseek.apiKey"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-deepseek-baseurl"></html:label>
-    <html:input
-      type="text"
-      preference="deepseek.baseURL"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-deepseek-model"></html:label>
-    <html:input
-      type="text"
-      preference="deepseek.model"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-  <html:label data-l10n-id="pref-deepseek-prompt"></html:label>
-  <html:textarea
-    id="zotero-prefpane-__addonRef__-textarea-deepseek-prompt"
-    preference="deepseek.prompt"
-    rows="4"
-    style="width: 100%"
-  ></html:textarea>
-
-  <html:label data-l10n-id="pref-custom-channels"></html:label>
-  <html:textarea
-    id="zotero-prefpane-__addonRef__-custom-channels"
-    rows="8"
-    style="width: 100%"
-  ></html:textarea>
-  <hbox>
-    <button
-      id="zotero-prefpane-__addonRef__-channels-validate"
-      data-l10n-id="pref-channels-validate"
-    />
-  </hbox>
-
-  <!-- 翻译 -->
-  <html:h3 data-l10n-id="pref-translate"></html:h3>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-source-lang"></html:label>
-    <html:select preference="sourceLang">
-      <html:option value="auto" data-l10n-id="pref-lang-auto"></html:option>
-      <html:option value="zh-CN">中文</html:option>
-      <html:option value="en">English</html:option>
-      <html:option value="ja">日本語</html:option>
-      <html:option value="ko">한국어</html:option>
-      <html:option value="de">Deutsch</html:option>
-      <html:option value="fr">Français</html:option>
-    </html:select>
-  </hbox>
-  <hbox align="center">
+  <label><html:h2 data-l10n-id="pref-general-title"></html:h2></label>
+  <checkbox id="ztr-enable" preference="enable" data-l10n-id="pref-enable" />
+  <hbox align="center" pack="start">
     <html:label data-l10n-id="pref-target-lang"></html:label>
-    <html:select preference="targetLang">
-      <html:option value="zh-CN" data-l10n-id="pref-lang-zhcn"></html:option>
-      <html:option value="en">English</html:option>
-      <html:option value="ja">日本語</html:option>
-      <html:option value="ko">한국어</html:option>
-      <html:option value="de">Deutsch</html:option>
-      <html:option value="fr">Français</html:option>
-    </html:select>
+    <html:input type="text" preference="targetLang" style="width: 10em" />
+    <html:label data-l10n-id="pref-source-lang"></html:label>
+    <html:input type="text" preference="sourceLang" style="width: 8em" />
   </hbox>
-  <hbox align="center">
+  <hbox align="center" pack="start">
     <html:label data-l10n-id="pref-timeout"></html:label>
     <html:input
-      type="text"
+      type="number"
       preference="translate.timeout"
-      style="width: 80px"
-    ></html:input>
-  </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-chunk-max"></html:label>
+      style="width: 8em"
+    />
+    <html:label data-l10n-id="pref-chunk-size"></html:label>
     <html:input
-      type="text"
+      type="number"
       preference="translate.chunkMaxChars"
-      style="width: 80px"
-    ></html:input>
+      style="width: 8em"
+    />
   </hbox>
   <checkbox
     preference="translate.autoOnSelect"
     data-l10n-id="pref-auto-on-select"
   />
-  <hbox align="center">
+  <hbox align="center" pack="start">
     <html:label data-l10n-id="pref-auto-debounce"></html:label>
     <html:input
-      type="text"
+      type="number"
       preference="translate.autoDebounceMs"
-      style="width: 80px"
-    ></html:input>
+      style="width: 8em"
+    />
   </hbox>
   <checkbox
     preference="translate.contextAware"
     data-l10n-id="pref-context-aware"
   />
+</groupbox>
 
-  <!-- 历史与缓存 -->
-  <html:h3 data-l10n-id="pref-history"></html:h3>
-  <checkbox preference="cacheEnabled" data-l10n-id="pref-cache-enabled" />
-  <hbox align="center">
-    <html:label data-l10n-id="pref-history-capacity"></html:label>
-    <html:input
-      type="text"
-      preference="historyCapacity"
-      style="width: 80px"
-    ></html:input>
+<groupbox>
+  <label><html:h2 data-l10n-id="pref-channels-title"></html:h2></label>
+  <html:div id="ztr-channel-order" class="ztr-prefs-list" />
+  <html:div data-l10n-id="pref-channels-order-hint"></html:div>
+  <checkbox preference="bing.enabled" data-l10n-id="pref-bing-enabled" />
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-bing-mode"></html:label>
+    <html:select id="ztr-bing-mode" preference="bing.mode" style="width: 12em">
+      <html:option value="edge" data-l10n-id="pref-bing-mode-edge" />
+      <html:option value="azure" data-l10n-id="pref-bing-mode-azure" />
+    </html:select>
   </hbox>
-  <hbox>
-    <button
-      id="zotero-prefpane-__addonRef__-clear-history"
-      data-l10n-id="pref-clear-history"
+  <vbox id="ztr-bing-azure">
+    <hbox align="center" pack="start">
+      <html:label data-l10n-id="pref-azure-key"></html:label>
+      <html:input
+        type="password"
+        preference="bing.azureKey"
+        style="width: 30em"
+      />
+    </hbox>
+    <hbox align="center" pack="start">
+      <html:label data-l10n-id="pref-azure-region"></html:label>
+      <html:input
+        type="text"
+        preference="bing.azureRegion"
+        style="width: 12em"
+      />
+    </hbox>
+  </vbox>
+  <checkbox
+    preference="deepseek.enabled"
+    data-l10n-id="pref-deepseek-enabled"
+  />
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-deepseek-key"></html:label>
+    <html:input
+      type="password"
+      preference="deepseek.apiKey"
+      style="width: 30em"
     />
   </hbox>
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-deepseek-baseurl"></html:label>
+    <html:input type="text" preference="deepseek.baseURL" style="width: 30em" />
+    <html:label data-l10n-id="pref-deepseek-model"></html:label>
+    <html:input type="text" preference="deepseek.model" style="width: 14em" />
+  </hbox>
+</groupbox>
 
-  <!-- 格式化 -->
-  <html:h3 data-l10n-id="pref-formatter"></html:h3>
+<groupbox>
+  <label><html:h2 data-l10n-id="pref-custom-channels-title"></html:h2></label>
+  <html:div id="ztr-custom-channels" class="ztr-prefs-list" />
+  <hbox align="center" pack="start">
+    <html:input
+      type="text"
+      id="ztr-custom-name"
+      placeholder="Name"
+      style="width: 10em"
+    />
+    <html:input
+      type="text"
+      id="ztr-custom-baseurl"
+      placeholder="https://api.example.com/v1"
+      style="width: 22em"
+    />
+    <html:input
+      type="password"
+      id="ztr-custom-key"
+      placeholder="API Key"
+      style="width: 16em"
+    />
+    <html:input
+      type="text"
+      id="ztr-custom-model"
+      placeholder="model"
+      style="width: 10em"
+    />
+    <html:button
+      id="ztr-add-channel"
+      class="small-button"
+      data-l10n-id="pref-add-channel"
+    />
+  </hbox>
+  <html:div data-l10n-id="pref-privacy-hint"></html:div>
+</groupbox>
+
+<groupbox>
+  <label><html:h2 data-l10n-id="pref-shortcuts-title"></html:h2></label>
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-shortcut-translate"></html:label>
+    <html:input
+      type="text"
+      id="ztr-shortcut-translate"
+      readonly="true"
+      style="width: 16em"
+    />
+  </hbox>
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-shortcut-summary"></html:label>
+    <html:input
+      type="text"
+      id="ztr-shortcut-summary"
+      readonly="true"
+      style="width: 16em"
+    />
+  </hbox>
+</groupbox>
+
+<groupbox>
+  <label><html:h2 data-l10n-id="pref-format-title"></html:h2></label>
   <checkbox
     preference="formatter.mergeLineBreaks"
-    data-l10n-id="pref-fmt-merge-lines"
+    data-l10n-id="pref-fmt-merge"
   />
   <checkbox
     preference="formatter.fixHyphenation"
@@ -202,50 +183,18 @@
     preference="formatter.normalizeSymbols"
     data-l10n-id="pref-fmt-symbols"
   />
+</groupbox>
 
-  <!-- 快捷键 -->
-  <html:h3 data-l10n-id="pref-shortcuts"></html:h3>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-shortcut-translate"></html:label>
-    <html:input
-      type="text"
-      preference="shortcut.translate"
-      style="width: 100%"
-    ></html:input>
+<groupbox>
+  <label><html:h2 data-l10n-id="pref-history-title"></html:h2></label>
+  <checkbox preference="cacheEnabled" data-l10n-id="pref-cache-enabled" />
+  <hbox align="center" pack="start">
+    <html:label data-l10n-id="pref-history-capacity"></html:label>
+    <html:input type="number" preference="historyCapacity" style="width: 8em" />
   </hbox>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-shortcut-summary"></html:label>
-    <html:input
-      type="text"
-      preference="shortcut.summary"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-
-  <!-- 总结 -->
-  <html:h3 data-l10n-id="pref-summary"></html:h3>
-  <hbox align="center">
-    <html:label data-l10n-id="pref-summary-model"></html:label>
-    <html:input
-      type="text"
-      preference="summary.model"
-      style="width: 100%"
-    ></html:input>
-  </hbox>
-  <html:label data-l10n-id="pref-summary-prompt"></html:label>
-  <html:textarea
-    id="zotero-prefpane-__addonRef__-textarea-summary-prompt"
-    preference="summary.prompt"
-    rows="4"
-    style="width: 100%"
-  ></html:textarea>
-
-  <!-- 帮助 -->
-  <vbox>
-    <html:label
-      data-l10n-id="pref-help"
-      data-l10n-args='{"name": "__addonName__","version":"__buildVersion__"}'
-    ></html:label>
-    <html:label data-l10n-id="pref-privacy"></html:label>
-  </vbox>
+  <html:button
+    id="ztr-clear-history"
+    class="danger-button"
+    data-l10n-id="pref-clear-history"
+  />
 </groupbox>

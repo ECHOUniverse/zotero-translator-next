@@ -1,69 +1,127 @@
 /**
- * AI 总结：复用当前启用的 LLM 渠道，模型/提示词可独立覆盖。
+ * AI 总结：复用当前启用的 LLM（OpenAI 兼容）渠道。
+ * @see PLAN.md §10
+ * - 模型/提示词可独立覆盖（prefs.summary.model / summary.prompt）
+ * - SSE 流式显示；可存入历史（translation_history.summary）
  */
-import { getPref } from "../utils/prefs";
-import { getFirstLLMChannel } from "../services";
-import { errorMessage, isAbortError } from "../services/base";
-import { OpenAIService } from "../services/openai";
-import { updateSummary } from "./history";
 
-export interface SummaryOptions {
-  /** 覆盖模型（默认：总结专用模型或渠道默认） */
-  model?: string;
-  /** 覆盖总结提示词（默认：summary.prompt） */
-  prompt?: string;
-  signal?: AbortSignal;
-  /** 总结完成后写入历史（需 historyId） */
-  historyId?: number;
-}
+import { prefs } from "../prefs";
+import { consumeSSE } from "../utils/sse";
+import { requestStream } from "../utils/network";
+import type { CancelToken } from "../utils/cancel";
+import { channelRegistry } from "../services";
+import { updateSummary } from "./history";
 
 export interface SummaryResult {
   text: string;
-  engine: string;
+  channelId: string;
 }
 
-/**
- * 对译文进行 AI 总结（流式）。
- * @throws 无可用 LLM 渠道时抛出提示
- */
-export async function summarize(
-  text: string,
-  opts: SummaryOptions = {},
-  onChunk?: (delta: string) => void,
-): Promise<SummaryResult> {
-  // 复用当前启用的 LLM 渠道（多 LLM 渠道扩展时可按 channelId 查找）
-  const channel = getFirstLLMChannel();
-  if (!channel || channel.kind !== "llm") {
-    throw new Error(
-      "总结需要 AI 渠道（DeepSeek 或自定义 OpenAI 兼容渠道），请先在设置中配置",
-    );
+export class SummaryManager {
+  /** 是否有可用的 LLM 渠道 */
+  hasAvailableLLM(): boolean {
+    return channelRegistry
+      .listEnabled()
+      .some((m) => m.kind === "llm" && m.configured);
   }
-  const llm = channel as OpenAIService;
 
-  const targetLang = getPref("targetLang");
-  const prompt = (opts.prompt || getPref("summary.prompt")).replace(
-    /\{targetLang\}/g,
-    targetLang,
-  );
-
-  try {
-    const summaryText = await llm.chat(
-      {
-        system: prompt,
-        user: text,
-        model: opts.model || getPref("summary.model") || undefined,
-        signal: opts.signal,
-      },
-      onChunk,
-    );
-    if (opts.historyId != null) {
-      await updateSummary(opts.historyId, summaryText).catch((e) =>
-        ztoolkit.log("save summary failed", e),
-      );
+  /**
+   * 流式总结。
+   * @param text 待总结文本（译文）
+   * @param onChunk 流式增量回调
+   */
+  async summarize(
+    text: string,
+    onChunk: (delta: string) => void,
+    token: CancelToken,
+  ): Promise<SummaryResult> {
+    const metas = channelRegistry.listEnabled();
+    const llmMeta = metas.find((m) => m.kind === "llm" && m.configured);
+    if (!llmMeta) {
+      throw new Error("No available LLM channel configured");
     }
-    return { text: summaryText, engine: channel.id };
-  } catch (e) {
-    if (isAbortError(e)) throw e;
-    throw new Error(`总结失败: ${errorMessage(e)}`);
+    const svc = channelRegistry.get(llmMeta.id);
+    if (!svc) {
+      throw new Error(`Channel ${llmMeta.id} not found`);
+    }
+
+    // 若自定义了总结模型，克隆配置并覆盖
+    const customModel = prefs.summaryModel.trim();
+    const prompt = prefs.summaryPrompt.trim();
+
+    let baseURL: string | undefined;
+    let apiKey: string | undefined;
+    let model: string | undefined;
+    if (llmMeta.id === "deepseek") {
+      baseURL = prefs.deepseekBaseURL;
+      apiKey = prefs.deepseekApiKey;
+      model = customModel || prefs.deepseekModel;
+    } else if (llmMeta.id.startsWith("custom:")) {
+      const cfg = prefs.customChannels.find(
+        (c) => `custom:${c.id}` === llmMeta.id,
+      );
+      baseURL = cfg?.baseURL;
+      apiKey = cfg?.apiKey;
+      model = customModel || cfg?.model;
+    }
+
+    if (!baseURL || !apiKey) {
+      throw new Error(`Channel ${llmMeta.id} is not fully configured`);
+    }
+
+    const messages = [
+      {
+        role: "system" as const,
+        content:
+          prompt ||
+          "You are an academic assistant. Summarize the given translated text in {targetLang}: key findings, methods and conclusions. Be concise (within 300 words).",
+      },
+      { role: "user" as const, content: text },
+    ];
+
+    const url = `${baseURL.replace(/\/+$/, "")}/chat/completions`;
+    const response = await requestStream({
+      url,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      json: {
+        model,
+        messages,
+        stream: true,
+        temperature: 0.3,
+      },
+      token,
+      timeoutMs: prefs.timeout,
+    });
+
+    let fullText = "";
+    await consumeSSE(
+      response.body,
+      (data) => {
+        if (data === "[DONE]") return;
+        try {
+          const parsed = JSON.parse(data) as {
+            choices?: Array<{ delta?: { content?: string } }>;
+          };
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            onChunk(delta);
+          }
+        } catch {
+          // 忽略解析失败行
+        }
+      },
+      token,
+    );
+
+    return { text: fullText, channelId: llmMeta.id };
+  }
+
+  /** 保存总结到历史记录 */
+  async saveSummary(historyID: number, summary: string): Promise<void> {
+    await updateSummary(historyID, summary);
   }
 }

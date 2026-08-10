@@ -1,60 +1,78 @@
 /**
- * 语言检测与语言码工具（纯函数）
+ * 语言检测（启发式，纯函数）与目标语言解析。
+ * 策略：CJK 字符占比判断中文/日文/韩文；否则按常见脚本特征粗判，
+ * 兜底返回 'en'。仅用于"自动检测"，精确检测交给翻译渠道（Bing from=auto）。
  */
+
+export type LangCode =
+  | "auto"
+  | "zh-CN"
+  | "zh-TW"
+  | "en"
+  | "ja"
+  | "ko"
+  | "de"
+  | "fr"
+  | "ru"
+  | "es"
+  | "it"
+  | "pt"
+  | "ar"
+  | "other";
+
+/** CJK 统一表意文字（含扩展）、假名、谚文 */
+const CJK_RE =
+  /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]/;
+const HAN_RE = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/;
+const KANA_RE = /[\u3040-\u30FF]/;
+const HANGUL_RE = /[\uAC00-\uD7AF]/;
+const CYRILLIC_RE = /[\u0400-\u04FF]/;
+const ARABIC_RE = /[\u0600-\u06FF]/;
 
 /**
- * 基于字符分布的粗粒度语言检测：
- * zh（含中日韩统一表意文字）、ja（假名）、ko（谚文）、en（拉丁）、auto（无法判断）
+ * 检测文本语言。返回 'zh-CN'（简体为主）、'zh-TW'（繁体为主）、'ja'、'ko'
+ * 或常见拉丁语言/其他。
  */
-export function detectLanguage(text: string): string {
+export function detectLang(text: string): LangCode {
+  if (!text) return "other";
   const sample = text.slice(0, 2000);
-  if (!sample) return "auto";
-
-  let cjk = 0;
-  let kana = 0;
-  let hangul = 0;
-  let latin = 0;
-  let total = 0;
-
-  for (const ch of sample) {
-    const code = ch.codePointAt(0)!;
-    if (/[\p{Script=Han}]/u.test(ch)) cjk++;
-    else if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(ch)) kana++;
-    else if (/[\p{Script=Hangul}]/u.test(ch)) hangul++;
-    else if (/[A-Za-zÀ-ÖØ-öø-ÿ]/u.test(ch)) latin++;
-    else continue;
-    total++;
+  const cjkCount = (sample.match(CJK_RE) || []).length;
+  if (cjkCount === 0) {
+    if (CYRILLIC_RE.test(sample)) return "ru";
+    if (ARABIC_RE.test(sample)) return "ar";
+    return "en"; // 默认拉丁文本按英文处理
   }
-  if (total === 0) return "auto";
+  const han = (sample.match(HAN_RE) || []).length;
+  const kana = (sample.match(KANA_RE) || []).length;
+  const hangul = (sample.match(HANGUL_RE) || []).length;
+  if (kana > han) return "ja";
+  if (hangul > han) return "ko";
+  // 繁体特征：常用繁体字（如 與、為、這、們、國、學、會、後）
+  const traditional = /[與為這們國學會後來時對說還進過問題點義體臺東長髮]/g;
+  const tradCount = (sample.match(traditional) || []).length;
+  const simplified = /[这们国学会后来时对说还进过问题点义体台东长]/g;
+  const simpCount = (sample.match(simplified) || []).length;
+  return tradCount > simpCount ? "zh-TW" : "zh-CN";
+}
 
-  const zhRatio = cjk / total;
-  const kanaRatio = kana / total;
-  const hangulRatio = hangul / total;
-  const latinRatio = latin / total;
-
-  if (kanaRatio >= 0.2) return "ja";
-  if (hangulRatio >= 0.2) return "ko";
-  if (zhRatio >= 0.3) return "zh";
-  if (latinRatio >= 0.5) return "en";
-  return "auto";
+/** 规范化用户输入的语言码（'zh' → 'zh-CN'，'zh-hans' → 'zh-CN'） */
+export function normalizeLangCode(code: string): string {
+  const c = code.trim().toLowerCase();
+  if (c === "zh" || c === "zh-hans" || c === "zh-cn") return "zh-CN";
+  if (c === "zh-hant" || c === "zh-tw" || c === "zh-hk") return "zh-TW";
+  if (c === "auto" || c === "auto-detect") return "auto";
+  return code.trim();
 }
 
 /**
- * 语言码适配：转换为目标渠道接受的格式。
- * bing: zh-CN → zh-Hans, zh-TW → zh-Hant, en → en
+ * 将检测结果与目标语言结合，输出翻译渠道可用的 from 参数。
+ * auto 或空 → 交给渠道自动检测。
  */
-export function normalizeLangCode(
-  code: string,
-  channel: "bing" | "llm",
+export function resolveSourceLang(
+  detected: LangCode | string,
+  manual: string,
 ): string {
-  if (!code || code === "auto") return "auto";
-  if (channel === "bing") {
-    const lower = code.toLowerCase();
-    if (lower === "zh-cn" || lower === "zh-hans" || lower === "zh")
-      return "zh-Hans";
-    if (lower === "zh-tw" || lower === "zh-hant") return "zh-Hant";
-    if (lower === "en" || lower === "en-us" || lower === "en-gb") return "en";
-    return lower;
-  }
-  return code;
+  if (manual && manual !== "auto") return normalizeLangCode(manual);
+  if (!detected || detected === "other") return "auto";
+  return normalizeLangCode(detected);
 }

@@ -18,7 +18,7 @@ Zotero 文献翻译插件：**格式优化 + 多渠道翻译 + 翻译历史 + AI
 npm install
 npm run start      # 热重载开发（需 Zotero 7+）
 npm run build      # 构建 + 类型检查
-npm run test:unit  # 纯函数单测（格式化/分块/队列/SSE）
+npm run test:unit  # 纯函数单测（格式化/分块/语言检测/哈希）
 npm run release    # 发布（GitHub release + update.json）
 ```
 
