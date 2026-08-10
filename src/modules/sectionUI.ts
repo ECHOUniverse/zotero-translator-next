@@ -215,6 +215,15 @@ export function updateStreamingText(
   if (box) box.textContent = text;
 }
 
+/** 强制区块内容高度自适应（collapsible-section 首次打开时测量高度≈0，
+ * 后续挂载的内容会被 max-height: var(--open-height) 裁剪不可见） */
+export function forceSectionOpenHeight(body: Element): void {
+  const section = body.closest("collapsible-section") as HTMLElement | null;
+  if (section) {
+    section.style.setProperty("--open-height", "auto");
+  }
+}
+
 /** 渲染历史列表 */
 export function renderHistoryList(
   doc: Document,

@@ -9,6 +9,7 @@ import { TranslateManager } from "./translate";
 import {
   el,
   buildSectionSkeleton,
+  forceSectionOpenHeight,
   renderResultCard,
   renderHistoryList,
   renderSummaryCard,
@@ -96,6 +97,29 @@ export class ReaderModule {
       ztoolkit.log("reader section registration failed");
     }
 
+    // 阅读器工具栏按钮（稳定触发路径；划选弹层可能被其他插件（如 Translate for Zotero）劫持）
+    Zotero.Reader.registerEventListener(
+      "renderToolbar",
+      (event: any) => {
+        try {
+          const { doc, append } = event;
+          if (doc.querySelector(".ztr-toolbar-btn")) return;
+          const btn = doc.createElement("div");
+          btn.className = "ztr-toolbar-btn";
+          btn.textContent = getString("btn-translate");
+          btn.setAttribute("tabindex", "-1");
+          btn.addEventListener("click", (e: MouseEvent) => {
+            e.preventDefault();
+            void this.translateSelection();
+          });
+          append(btn);
+        } catch (e) {
+          ztoolkit.log("toolbar handler error", e);
+        }
+      },
+      config.addonID,
+    );
+
     // 划选弹层：注入"翻译"按钮（仿 zotero-pdf-translate：div + click + preventDefault）
     Zotero.Reader.registerEventListener(
       "renderTextSelectionPopup",
@@ -148,6 +172,7 @@ export class ReaderModule {
     this.skeleton = skeleton;
     this.buildToolbar(doc, skeleton.toolbar);
     this.refreshView();
+    forceSectionOpenHeight(body);
     ztoolkit.log("reader section skeleton mounted", {
       rootChildren: root.children.length,
     });
@@ -290,6 +315,7 @@ export class ReaderModule {
           void this.startSummary();
         },
       });
+      forceSectionOpenHeight(this.skeleton.historyCard);
     }
   }
 

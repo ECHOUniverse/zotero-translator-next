@@ -206,3 +206,21 @@
 .ztr-popup-btn:hover {
   background: var(--fill-tertiary, #e0e0e0);
 }
+
+/* 阅读器工具栏按钮 */
+.ztr-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--fill-quaternary, #c8c8c8);
+  border-radius: 6px;
+  background: var(--fill-secondary, #f4f4f4);
+  color: var(--text-primary, #1a1a1a);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ztr-toolbar-btn:hover {
+  background: var(--fill-tertiary, #e0e0e0);
+}

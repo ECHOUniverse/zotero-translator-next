@@ -6,6 +6,7 @@ import { getLocaleID } from "../utils/locale";
 import { TranslateManager } from "./translate";
 import {
   buildSectionSkeleton,
+  forceSectionOpenHeight,
   renderResultCard,
   renderHistoryList,
   initialViewState,
@@ -55,9 +56,8 @@ export class ItemPaneModule {
         }
         ztoolkit.log("item section init", { hasBody: Boolean(body) });
       },
-      onItemChange: ({ setEnabled }) => {
-        // 恒启用，避免 tabType 意外值导致区块禁用
-        setEnabled(true);
+      onItemChange: ({ setEnabled, tabType }) => {
+        setEnabled(tabType === "library");
         return true;
       },
       onRender: ({ body, item }) => {
@@ -134,6 +134,7 @@ export class ItemPaneModule {
     root.appendChild(skeleton.root);
     this.skeleton = skeleton;
     this.buildToolbar(doc, skeleton.toolbar);
+    forceSectionOpenHeight(body);
     ztoolkit.log("item section skeleton mounted");
   }
 
@@ -189,6 +190,7 @@ export class ItemPaneModule {
         void deleteHistory(id).then(() => this.refreshHistory(doc));
       },
     });
+    forceSectionOpenHeight(this.skeleton.historyCard);
     // 按条目删除（Q13）
     if (this.currentItemID != null) {
       const header =

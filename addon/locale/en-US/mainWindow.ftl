@@ -2,7 +2,7 @@
 
 reader-section-head = Translate
 reader-section-sidenav = ZoteroTranslatorNext: Translate & History
-item-section-head = Translate
+item-section-head = Item Translation
 item-section-sidenav = ZoteroTranslatorNext: Item Translation
 
 btn-translate-title = Translate Title
