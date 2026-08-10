@@ -224,11 +224,51 @@ export function forceSectionOpenHeight(body: Element): void {
   }
 }
 
-/** 确保区块处于展开状态（防止 panes.<paneID>.open pref 意外为 false 导致内容不可见） */
+/** 内联样式强制 body 可见（终极兑底：覆盖折叠态的 visibility:hidden / max-height:0）
+ *
+ * Zotero collapsible-section 折叠时对 body（:not(.head) 子元素）施加
+ * `max-height:0; opacity:0; visibility:hidden`，且无 !important，
+ * 因此内联样式可以无条件覆盖，不依赖 open 属性/empty 状态。 */
+export function forceBodyVisible(body: Element): void {
+  try {
+    const st = (body as HTMLElement).style;
+    if (!st) return;
+    st.setProperty("max-height", "none");
+    st.setProperty("opacity", "1");
+    st.setProperty("visibility", "visible");
+    st.setProperty("overflow-y", "visible");
+  } catch (e) {
+    // 环境不支持内联样式时忽略（不阻断挂载）
+  }
+}
+
+/** 确保区块处于展开状态（防止 panes.<paneID>.open pref 意外为 false 导致内容不可见）
+ *
+ * 三重保障：
+ * 1) 先走 open setter —— 展开 + 触发 _saveOpenState 把 pref 修正回 true（一劳永逸）；
+ * 2) setter 可能被 empty early-return 吞掉，因此无论结果如何，直接保证 open 属性存在；
+ * 3) 强制 --open-height: auto 避免高度裁剪。 */
 export function ensureSectionOpen(body: Element): void {
   const section = body.closest("collapsible-section") as any;
-  if (section && !section.open && !section.empty) {
-    section.open = true;
+  if (!section) return;
+  try {
+    if (!section.empty && !section.open) {
+      section.open = true;
+    }
+  } catch (e) {
+    // setter 异常不阻断属性兑底
+  }
+  try {
+    if (!section.hasAttribute("open")) {
+      section.setAttribute("open", "");
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    section.style.setProperty("--open-height", "auto");
+  } catch (e) {
+    // ignore
   }
 }
 

@@ -5,12 +5,14 @@ import { config } from "../../package.json";
 import { getLocaleID, getString } from "../utils/locale";
 import { getPref, getPrefJSON, setPref, setPrefJSON } from "../utils/prefs";
 import { getChannels } from "../services";
+import { createAbortController } from "../utils/abort";
 import { TranslateManager } from "./translate";
 import {
   el,
   buildSectionSkeleton,
   forceSectionOpenHeight,
   ensureSectionOpen,
+  forceBodyVisible,
   renderResultCard,
   renderHistoryList,
   renderSummaryCard,
@@ -151,9 +153,8 @@ export class ReaderModule {
     );
   }
 
-  /** 挂载骨架（幂等：已有内容则跳过） */
+  /** 挂载骨架（幂等：同一 body 已有内容则跳过；每次调用都先保证可见性） */
   private mountSkeleton(body: Element): void {
-    if (this.skeleton) return;
     const doc = body.ownerDocument!;
     let root = body.querySelector(
       `#${READER_SECTION_ID}`,
@@ -164,20 +165,58 @@ export class ReaderModule {
       root.style.height = "100%";
       body.appendChild(root);
     }
+    // 可见性三重保障前置：即使后续渲染步骤异常，内容也必定可见
+    forceBodyVisible(body);
+    forceSectionOpenHeight(body);
+    ensureSectionOpen(body);
+
     if (root.firstChild) {
-      // 已有内容（其它途径注入），跳过挂载
+      // 已挂载过（重渲染/多 tab 场景）：只做可见性保障，不重复挂载
       return;
     }
     const skeleton = buildSectionSkeleton(doc);
     root.appendChild(skeleton.root);
     this.skeleton = skeleton;
-    this.buildToolbar(doc, skeleton.toolbar);
-    this.refreshView();
-    forceSectionOpenHeight(body);
-    ensureSectionOpen(body);
-    ztoolkit.log("reader section skeleton mounted", {
+    try {
+      this.buildToolbar(doc, skeleton.toolbar);
+    } catch (e) {
+      console.error("[ZoteroTranslatorNext] buildToolbar failed", e);
+    }
+    try {
+      this.refreshView();
+    } catch (e) {
+      console.error("[ZoteroTranslatorNext] refreshView failed", e);
+    }
+    this.auditVisibility(body);
+    console.log("[ZoteroTranslatorNext] reader section mounted", {
       rootChildren: root.children.length,
     });
+  }
+
+  /** 挂载后延迟审计可见性（输出到日志，便于远程诊断；不影响功能） */
+  private auditVisibility(body: Element): void {
+    try {
+      setTimeout(() => {
+        const section = body.closest("collapsible-section") as any;
+        const win = body.ownerDocument?.defaultView;
+        const cs = win?.getComputedStyle(body);
+        console.log("[ZoteroTranslatorNext] section visibility audit", {
+          openAttr: section?.hasAttribute("open") ?? null,
+          openProp: section?.open ?? null,
+          empty: section?.empty ?? null,
+          pref:
+            section?.dataset?.pane != null
+              ? Zotero.Prefs.get(`panes.${section.dataset.pane}.open`)
+              : null,
+          bodyMaxHeight: cs?.maxHeight ?? null,
+          bodyVisibility: cs?.visibility ?? null,
+          bodyOpacity: cs?.opacity ?? null,
+          bodyChildren: body.children.length,
+        });
+      }, 500);
+    } catch (e) {
+      // 审计失败不影响功能
+    }
   }
 
   private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
@@ -383,7 +422,7 @@ export class ReaderModule {
   private async startSummary(): Promise<void> {
     if (!this.lastResultText) return;
     this.summaryState = { status: "processing", text: "" };
-    this.summaryAbort = new AbortController();
+    this.summaryAbort = createAbortController();
     if (this.skeleton) {
       renderSummaryCard(
         this.skeleton.root.ownerDocument!,
@@ -399,7 +438,7 @@ export class ReaderModule {
     try {
       const res = await summarize(
         this.lastResultText,
-        { signal: this.summaryAbort.signal, historyId: this.lastHistoryId },
+        { signal: this.summaryAbort?.signal, historyId: this.lastHistoryId },
         (delta) => {
           this.summaryState.text += delta;
           if (this.skeleton) {

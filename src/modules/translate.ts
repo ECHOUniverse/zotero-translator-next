@@ -9,6 +9,7 @@ import { detectLanguage } from "../utils/lang";
 import { getPref } from "../utils/prefs";
 import { getChannels } from "../services";
 import { errorMessage, isAbortError } from "../services/base";
+import { createAbortController } from "../utils/abort";
 import { addHistory, findCache, hashSource } from "./history";
 
 export interface TranslateRequest {
@@ -192,7 +193,7 @@ export class TranslateManager {
   /** 队列处理器：逐块翻译，失败整任务回退下一渠道 */
   private async process(
     job: TranslateJobMeta,
-    signal: AbortSignal,
+    signal?: AbortSignal,
   ): Promise<void> {
     this.emit({ type: "processing", taskId: job.taskId });
 
@@ -210,13 +211,13 @@ export class TranslateManager {
 
     // 渠道级回退：整任务重试下一渠道（避免混用引擎输出）
     for (const ch of channels) {
-      if (signal.aborted) throw new DOMException("aborted", "AbortError");
+      if (signal?.aborted) throw new DOMException("aborted", "AbortError");
       // 重置流式缓冲（避免回退后残留上一渠道的增量）
       this.emit({ type: "processing", taskId: job.taskId });
       const parts: string[] = [];
       let chunkOk = true;
       for (let i = 0; i < job.chunks.length; i++) {
-        if (signal.aborted) throw new DOMException("aborted", "AbortError");
+        if (signal?.aborted) throw new DOMException("aborted", "AbortError");
         try {
           const res = await ch.translate(
             {

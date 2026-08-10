@@ -8,6 +8,7 @@ import {
   buildSectionSkeleton,
   forceSectionOpenHeight,
   ensureSectionOpen,
+  forceBodyVisible,
   renderResultCard,
   renderHistoryList,
   initialViewState,
@@ -116,7 +117,6 @@ export class ItemPaneModule {
 
   /** 挂载骨架（幂等：已有内容则跳过） */
   private mountSkeleton(body: Element): void {
-    if (this.skeleton) return;
     const doc = body.ownerDocument!;
     let root = body.querySelector(`#${ITEM_SECTION_ID}`) as HTMLElement | null;
     if (!root) {
@@ -128,16 +128,22 @@ export class ItemPaneModule {
       root.style.height = "100%";
       body.appendChild(root);
     }
+    // 可见性三重保障前置：即使后续渲染步骤异常，内容也必定可见
+    forceBodyVisible(body);
+    forceSectionOpenHeight(body);
+    ensureSectionOpen(body);
     if (root.firstChild) {
       return;
     }
     const skeleton = buildSectionSkeleton(doc);
     root.appendChild(skeleton.root);
     this.skeleton = skeleton;
-    this.buildToolbar(doc, skeleton.toolbar);
-    forceSectionOpenHeight(body);
-    ensureSectionOpen(body);
-    ztoolkit.log("item section skeleton mounted");
+    try {
+      this.buildToolbar(doc, skeleton.toolbar);
+    } catch (e) {
+      console.error("[ZoteroTranslatorNext] item buildToolbar failed", e);
+    }
+    console.log("[ZoteroTranslatorNext] item section mounted");
   }
 
   private buildToolbar(doc: Document, toolbar: HTMLElement): void {

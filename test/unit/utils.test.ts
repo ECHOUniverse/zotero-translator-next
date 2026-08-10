@@ -112,3 +112,26 @@ describe("utils 工具函数", function () {
     });
   });
 });
+
+describe("abort 安全工厂（Zotero 9 沙盒无 AbortController）", function () {
+  it("有 AbortController 时返回实例", function () {
+    const { createAbortController } =
+      require("../../src/utils/abort.js") as any;
+    const c = createAbortController();
+    expect(c).to.not.equal(null);
+    expect(c!.signal.aborted).to.equal(false);
+  });
+
+  it("无 AbortController 时返回 null（不抛错）", function () {
+    const orig = (globalThis as any).AbortController;
+    delete (globalThis as any).AbortController;
+    try {
+      const { createAbortController, isAborted } =
+        require("../../src/utils/abort.js") as any;
+      expect(createAbortController()).to.equal(null);
+      expect(isAborted(null)).to.equal(false);
+    } finally {
+      (globalThis as any).AbortController = orig;
+    }
+  });
+});

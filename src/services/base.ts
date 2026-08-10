@@ -2,6 +2,8 @@
  * 渠道抽象层：TranslateService 接口与任务类型定义
  */
 
+import { createAbortController } from "../utils/abort";
+
 export interface TranslateTask {
   id: string;
   sourceText: string;
@@ -34,13 +36,18 @@ export interface TranslateService {
   ): Promise<TranslateResult>;
 }
 
-/** 带超时与外部取消的 fetch 包装 */
+/** 带超时与外部取消的 fetch 包装（AbortController 缺失时自动降级） */
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
-  const controller = new AbortController();
+  const controller = createAbortController();
+  if (!controller) {
+    // Zotero 9 沙盒无 AbortController：无法真正取消底层请求，
+    // 超时用 Promise.race 兜底（迟到的响应直接丢弃）。
+    return await fetchWithTimeoutFallback(input, init, timeoutMs);
+  }
   const timer = setTimeout(
     () => controller.abort(new Error("timeout")),
     timeoutMs,
@@ -53,6 +60,26 @@ export async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
     external?.removeEventListener("abort", onAbort);
+  }
+}
+
+/** 无 AbortController 环境的超时降级：race 一个超时 Promise（不取消底层请求） */
+async function fetchWithTimeoutFallback(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`Request timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([fetch(input, init), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

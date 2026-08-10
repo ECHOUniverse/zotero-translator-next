@@ -1,7 +1,13 @@
 /**
  * 翻译任务队列（纯 TS，无 Zotero 依赖，可单测）
  * 单消费者 FIFO；等待中任务可取消，处理中任务通过 AbortSignal 取消。
+ *
+ * 注意：Zotero 9 沙盒可能没有全局 AbortController，取消能力自动降级
+ * （无取消信号时任务照常执行，cancel 为 no-op），pump 循环永不因
+ * 取消设施缺失而崩溃/死锁。
  */
+
+import { createAbortController } from "./abort";
 
 export type TaskStatus =
   | "waiting"
@@ -22,7 +28,7 @@ export interface QueueTask<T> {
 
 export type TaskProcessor<T> = (
   payload: T,
-  signal: AbortSignal,
+  signal?: AbortSignal,
 ) => Promise<void>;
 
 let seq = 0;
@@ -97,6 +103,11 @@ export class TaskQueue<T> {
     return false;
   }
 
+  /** 处理中任务的取消信号是否已触发 */
+  private currentAborted(): boolean {
+    return Boolean(this.controller?.signal.aborted);
+  }
+
   /** 清空等待队列（处理中任务不受影响） */
   clear(): void {
     const cancelled = this.tasks.filter((t) => t.status === "waiting");
@@ -141,32 +152,38 @@ export class TaskQueue<T> {
   private async pump(): Promise<void> {
     if (this.processing) return;
     this.processing = true;
-    while (this.tasks.length > 0) {
-      const task = this.tasks[0];
-      if (task.status !== "waiting") {
-        this.tasks.shift();
-        continue;
-      }
-      task.status = "processing";
-      task.startedAt = Date.now();
-      this.emit(task);
-      this.controller = new AbortController();
-      try {
-        await this.processor(task.payload, this.controller.signal);
-        task.status = "success";
-      } catch (e) {
-        if (this.controller.signal.aborted) {
-          task.status = "cancelled";
-        } else {
-          task.status = "fail";
-          task.error = e instanceof Error ? e.message : String(e);
+    try {
+      while (this.tasks.length > 0) {
+        const task = this.tasks[0];
+        if (task.status !== "waiting") {
+          this.tasks.shift();
+          continue;
         }
+        task.status = "processing";
+        task.startedAt = Date.now();
+        this.emit(task);
+        // 环境可能没有 AbortController（Zotero 9 沙盒实证）：
+        // createAbortController 永不抛错，processor 收到 undefined 信号即无取消模式。
+        this.controller = createAbortController();
+        try {
+          await this.processor(task.payload, this.controller?.signal);
+          task.status = "success";
+        } catch (e) {
+          if (this.currentAborted()) {
+            task.status = "cancelled";
+          } else {
+            task.status = "fail";
+            task.error = e instanceof Error ? e.message : String(e);
+          }
+        }
+        task.finishedAt = Date.now();
+        this.tasks.shift();
+        this.emit(task);
+        this.resolveFinish(task);
       }
-      task.finishedAt = Date.now();
-      this.tasks.shift();
-      this.emit(task);
-      this.resolveFinish(task);
+    } finally {
+      // 无论处理过程发生什么，都释放队列锁，避免永久死锁
+      this.processing = false;
     }
-    this.processing = false;
   }
 }
