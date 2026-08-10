@@ -3,8 +3,8 @@ import { TaskQueue, QueueTask } from "../../src/utils/queue.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe("TaskQueue 任务队列", () => {
-  it("FIFO 顺序执行（并发 1）", async () => {
+describe("TaskQueue 任务队列", function () {
+  it("FIFO 顺序执行（并发 1）", async function () {
     const order: number[] = [];
     const q = new TaskQueue<number>(async (n) => {
       await sleep(5);
@@ -17,7 +17,7 @@ describe("TaskQueue 任务队列", () => {
     expect(order).to.deep.equal([1, 2, 3]);
   });
 
-  it("add 的 Promise 在成功后 resolve 任务", async () => {
+  it("add 的 Promise 在成功后 resolve 任务", async function () {
     const q = new TaskQueue<number>(async (n) => {});
     const task = await q.add(42);
     expect(task.status).to.equal("success");
@@ -25,7 +25,7 @@ describe("TaskQueue 任务队列", () => {
     expect(task.id).to.be.a("string");
   });
 
-  it("处理器抛错 → 任务 fail 并 reject", async () => {
+  it("处理器抛错 → 任务 fail 并 reject", async function () {
     const q = new TaskQueue<number>(async () => {
       throw new Error("boom");
     });
@@ -45,7 +45,7 @@ describe("TaskQueue 任务队列", () => {
     expect(finished[0].error).to.equal("boom");
   });
 
-  it("cancel 等待中的任务", async () => {
+  it("cancel 等待中的任务", async function () {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const q = new TaskQueue<number>(async (n) => {
@@ -66,7 +66,7 @@ describe("TaskQueue 任务队列", () => {
     expect(q.size()).to.equal(0);
   });
 
-  it("取消处理中任务 → abort signal 触发", async () => {
+  it("取消处理中任务 → abort signal 触发", async function () {
     let aborted = false;
     const q = new TaskQueue<number>(async (n, signal) => {
       await new Promise<void>((resolve) => {
@@ -83,7 +83,7 @@ describe("TaskQueue 任务队列", () => {
     expect(aborted).to.equal(true);
   });
 
-  it("clear 清空等待队列（处理中任务不受影响）", async () => {
+  it("clear 清空等待队列（处理中任务不受影响）", async function () {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const q = new TaskQueue<number>(async (n) => {
@@ -101,7 +101,7 @@ describe("TaskQueue 任务队列", () => {
     await p1;
   });
 
-  it("状态回调 onUpdate 触发", async () => {
+  it("状态回调 onUpdate 触发", async function () {
     const seen: string[] = [];
     const q = new TaskQueue<number>(async () => {});
     q.onUpdate = (t) => seen.push(t.status);
@@ -111,7 +111,7 @@ describe("TaskQueue 任务队列", () => {
     expect(seen).to.include("success");
   });
 
-  it("任务 id 唯一", async () => {
+  it("任务 id 唯一", async function () {
     const q = new TaskQueue<number>(async () => {});
     const ids = new Set<string>();
     for (let i = 0; i < 20; i++) {
@@ -121,7 +121,7 @@ describe("TaskQueue 任务队列", () => {
     expect(ids.size).to.equal(20);
   });
 
-  it("失败后继续执行后续任务", async () => {
+  it("失败后继续执行后续任务", async function () {
     const order: string[] = [];
     const q = new TaskQueue<string>(async (s) => {
       if (s === "bad") throw new Error("x");
