@@ -39,7 +39,8 @@ ztr-save-summary = Save to history
 ztr-summary-saved = Saved
 
 # Context menu
-ztr-menuitem-translate-abstract = Translate item abstract
+ztr-menuitem-translate-abstract =
+    .label = Translate item abstract
 
 # Misc
 ztr-no-text = This item has no title or abstract to translate

@@ -39,7 +39,8 @@ ztr-save-summary = 存入历史
 ztr-summary-saved = 已保存
 
 # 右键菜单
-ztr-menuitem-translate-abstract = 翻译条目摘要
+ztr-menuitem-translate-abstract =
+    .label = 翻译条目摘要
 
 # 其他
 ztr-no-text = 该条目没有可翻译的标题或摘要

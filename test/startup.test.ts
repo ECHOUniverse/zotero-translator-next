@@ -111,13 +111,13 @@ describe("startup", function () {
       'item-pane-custom-section[data-pane$="-translator-reader"]',
     );
     assert.ok(itemSection, "item 区块元素应存在");
+
+    // 等待 l10n 异步应用完成（回归：Fluent value 形态会清空区块内容，
+    // .label 形态应用后 body 必须仍然存在）
+    await new Promise((r) => setTimeout(r, 2000));
+
     const body = itemSection!.querySelector('[data-type="body"]');
-    if (!body) {
-      // headless 下元素创建但 body 未注入（渲染管线未完成）
-      this.skip();
-      return;
-    }
-    assert.ok(body, "item 区块 body 应存在");
+    assert.ok(body, "item 区块 body 应存在（l10n 应用后不得清空区块内容）");
     const toolbar = body?.querySelector(".ztr-toolbar");
     const result = body?.querySelector(".ztr-result");
     assert.ok(toolbar, "工具栏应已渲染");
@@ -128,6 +128,14 @@ describe("startup", function () {
       2,
       `工具栏应有渠道/语言两个下拉; bodyHTML=${body?.innerHTML.slice(0, 400)}`,
     );
+    // 区块 label 来自 .label 属性形态（value 形态会写坏内容）
+    const cs = itemSection!.querySelector("collapsible-section");
+    if (cs) {
+      assert.ok(
+        cs.getAttribute("label"),
+        `区块 label 应来自 .label 属性; label=${cs.getAttribute("label")}`,
+      );
+    }
     // reader 区块在主窗口应隐藏（仅阅读器 tab 显示），防止双区块重复
     if (readerSection) {
       assert.equal(
