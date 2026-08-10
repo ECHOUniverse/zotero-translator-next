@@ -30,6 +30,13 @@ import { createCancelToken, CancelError } from "../utils/cancel";
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
 
+/** XUL 文档中创建 HTML 元素必须显式指定 HTML 命名空间（createElement 默认 XUL） */
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
+function el(doc: Document, tag: string): any {
+  return doc.createElementNS(HTML_NS, tag);
+}
+
 /** 工具栏当前选中的渠道（翻译入口读取） */
 let selectedChannelId = "bing";
 export function getSelectedChannelId(): string {
@@ -299,37 +306,37 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
     return;
   }
 
-  const card = doc.createElement("div");
+  const card = el(doc, "div");
   card.className = "ztr-card";
   card.dataset.ztrTask = task.id;
 
   // 状态行
-  const statusRow = doc.createElement("div");
+  const statusRow = el(doc, "div");
   statusRow.className = "ztr-card-status";
-  const badge = doc.createElement("span");
+  const badge = el(doc, "span");
   badge.className = `ztr-badge ztr-badge-${task.status}`;
   badge.textContent = statusLabel(task.status);
   statusRow.append(badge);
   if (task.engine) {
-    const engine = doc.createElement("span");
+    const engine = el(doc, "span");
     engine.className = "ztr-badge ztr-badge-channel";
     engine.textContent = channelRegistry.get(task.engine)?.name ?? task.engine;
     statusRow.append(engine);
   }
   if (task.detectedLang && task.detectedLang !== "auto") {
-    const lang = doc.createElement("span");
+    const lang = el(doc, "span");
     lang.className = "ztr-muted";
     lang.textContent = `↳ ${task.detectedLang}`;
     statusRow.append(lang);
   }
   if (task.fromCache) {
-    const cache = doc.createElement("span");
+    const cache = el(doc, "span");
     cache.className = "ztr-badge ztr-badge-cache";
     cache.textContent = getString("ztr-cache-hit");
     statusRow.append(cache);
   }
   if (task.error) {
-    const err = doc.createElement("span");
+    const err = el(doc, "span");
     err.className = "ztr-error";
     err.textContent = task.error;
     statusRow.append(err);
@@ -337,7 +344,7 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   card.append(statusRow);
 
   // 译文
-  const text = doc.createElement("div");
+  const text = el(doc, "div");
   text.className = "ztr-result-text";
   text.textContent =
     task.status === "processing" && !task.translatedText
@@ -347,7 +354,7 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   card.append(text);
 
   // 操作行
-  const actions = doc.createElement("div");
+  const actions = el(doc, "div");
   actions.className = "ztr-card-actions";
   if (task.status === "success" || task.status === "fail") {
     actions.append(
@@ -421,11 +428,11 @@ function buildToolbar(
   if (!toolbar || toolbar.hasChildNodes()) return;
 
   // 渠道选择
-  const channelSelect = doc.createElement("select");
+  const channelSelect = el(doc, "select");
   channelSelect.className = "ztr-select";
   channelSelect.title = getString("ztr-channel-label");
   for (const meta of channelRegistry.listAll()) {
-    const opt = doc.createElement("option");
+    const opt = el(doc, "option");
     opt.value = meta.id;
     opt.textContent = meta.name;
     opt.disabled = !meta.enabled || !meta.configured;
@@ -438,7 +445,7 @@ function buildToolbar(
   toolbar.append(channelSelect);
 
   // 目标语言
-  const langSelect = doc.createElement("select");
+  const langSelect = el(doc, "select");
   langSelect.className = "ztr-select";
   const langs: Array<[string, string]> = [
     ["zh-CN", "中文（简体）"],
@@ -452,7 +459,7 @@ function buildToolbar(
     ["es", "Español"],
   ];
   for (const [code, label] of langs) {
-    const opt = doc.createElement("option");
+    const opt = el(doc, "option");
     opt.value = code;
     opt.textContent = label;
     langSelect.append(opt);
@@ -466,7 +473,7 @@ function buildToolbar(
 
   // 条目区块：翻译选中条目按钮
   if (ctx.kind === "item") {
-    const btn = doc.createElement("button");
+    const btn = el(doc, "button");
     btn.className = "ztr-btn";
     btn.textContent = getString("ztr-translate-item");
     btn.addEventListener("click", () => {
@@ -509,7 +516,7 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
     box.append(emptyState(doc, getString("ztr-empty-history")));
     return;
   }
-  const list = doc.createElement("div");
+  const list = el(doc, "div");
   list.className = "ztr-history-list";
   for (const entry of entries) {
     list.append(
@@ -526,30 +533,30 @@ function historyItem(
   entry: HistoryEntry,
   onDelete: () => void,
 ): HTMLDivElement {
-  const row = doc.createElement("div");
+  const row = el(doc, "div");
   row.className = "ztr-history-item";
-  const head = doc.createElement("div");
+  const head = el(doc, "div");
   head.className = "ztr-history-head";
-  const time = doc.createElement("span");
+  const time = el(doc, "span");
   time.className = "ztr-muted";
   time.textContent = formatTime(entry.createdAt);
   head.append(time);
-  const engine = doc.createElement("span");
+  const engine = el(doc, "span");
   engine.className = "ztr-badge ztr-badge-channel";
   engine.textContent = channelRegistry.get(entry.engine)?.name ?? entry.engine;
   head.append(engine);
-  const del = doc.createElement("button");
+  const del = el(doc, "button");
   del.className = "ztr-icon-btn";
   del.textContent = "🗑";
   del.title = getString("ztr-delete");
-  del.addEventListener("click", (e) => {
+  del.addEventListener("click", (e: Event) => {
     e.stopPropagation();
     onDelete();
   });
   head.append(del);
   row.append(head);
 
-  const preview = doc.createElement("div");
+  const preview = el(doc, "div");
   preview.className = "ztr-history-preview";
   preview.textContent =
     entry.translatedText.slice(0, 120) +
@@ -572,21 +579,21 @@ async function runSummary(
   const token = createCancelToken();
 
   sbox.replaceChildren();
-  const card = doc.createElement("div");
+  const card = el(doc, "div");
   card.className = "ztr-card";
-  const head = doc.createElement("div");
+  const head = el(doc, "div");
   head.className = "ztr-card-status";
-  const badge = doc.createElement("span");
+  const badge = el(doc, "span");
   badge.className = "ztr-badge ztr-badge-processing";
   badge.textContent = getString("ztr-summarizing");
   head.append(badge);
   card.append(head);
 
-  const text = doc.createElement("div");
+  const text = el(doc, "div");
   text.className = "ztr-result-text ztr-streaming";
   card.append(text);
 
-  const actions = doc.createElement("div");
+  const actions = el(doc, "div");
   actions.className = "ztr-card-actions";
   card.append(actions);
   sbox.append(card);
@@ -605,7 +612,7 @@ async function runSummary(
       actionButton(doc, getString("ztr-save-summary"), () => {
         void saveSummaryToHistory(task, result).then(() => {
           actions.replaceChildren();
-          const saved = doc.createElement("span");
+          const saved = el(doc, "span");
           saved.className = "ztr-muted";
           saved.textContent = getString("ztr-summary-saved");
           actions.append(saved);
@@ -617,7 +624,7 @@ async function runSummary(
       badge.textContent = getString("ztr-status-cancelled");
     } else {
       badge.textContent = getString("ztr-status-fail");
-      const err = doc.createElement("div");
+      const err = el(doc, "div");
       err.className = "ztr-error";
       err.textContent = (e as Error).message;
       card.append(err);
@@ -642,7 +649,7 @@ async function saveSummaryToHistory(
 // ---------------------------------------------------------------------------
 
 function emptyState(doc: Document, text: string): HTMLDivElement {
-  const div = doc.createElement("div");
+  const div = el(doc, "div");
   div.className = "ztr-empty";
   div.textContent = text;
   return div;
@@ -653,7 +660,7 @@ function actionButton(
   label: string,
   onClick: () => void,
 ): HTMLButtonElement {
-  const btn = doc.createElement("button");
+  const btn = el(doc, "button");
   btn.className = "ztr-btn";
   btn.textContent = label;
   btn.addEventListener("click", onClick);
@@ -661,27 +668,27 @@ function actionButton(
 }
 
 function buildCompare(doc: Document, task: TranslateTaskInfo): HTMLElement {
-  const details = doc.createElement("details");
+  const details = el(doc, "details");
   details.className = "ztr-compare";
-  const summary = doc.createElement("summary");
+  const summary = el(doc, "summary");
   summary.textContent = getString("ztr-compare-label");
   details.append(summary);
 
-  const src = doc.createElement("div");
+  const src = el(doc, "div");
   src.className = "ztr-compare-block";
   src.append(compareHeading(doc, getString("ztr-original")));
   src.append(compareText(doc, task.sourceText));
   details.append(src);
 
   if (task.formattedText && task.formattedText !== task.sourceText) {
-    const fmt = doc.createElement("div");
+    const fmt = el(doc, "div");
     fmt.className = "ztr-compare-block";
     fmt.append(compareHeading(doc, getString("ztr-formatted")));
     fmt.append(compareText(doc, task.formattedText));
     details.append(fmt);
   }
 
-  const tr = doc.createElement("div");
+  const tr = el(doc, "div");
   tr.className = "ztr-compare-block";
   tr.append(compareHeading(doc, getString("ztr-translated")));
   tr.append(compareText(doc, task.translatedText));
@@ -690,14 +697,14 @@ function buildCompare(doc: Document, task: TranslateTaskInfo): HTMLElement {
 }
 
 function compareHeading(doc: Document, label: string): HTMLDivElement {
-  const div = doc.createElement("div");
+  const div = el(doc, "div");
   div.className = "ztr-compare-heading";
   div.textContent = label;
   return div;
 }
 
 function compareText(doc: Document, text: string): HTMLDivElement {
-  const div = doc.createElement("div");
+  const div = el(doc, "div");
   div.className = "ztr-compare-text";
   div.textContent = text;
   return div;

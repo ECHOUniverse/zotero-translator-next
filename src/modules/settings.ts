@@ -11,6 +11,13 @@ import { getString } from "../utils/locale";
 import { prefs } from "../prefs";
 import { channelRegistry } from "../services";
 
+/** 偏好窗口为 XUL 文档：创建 HTML 元素须显式命名空间 */
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
+function el(doc: Document, tag: string): any {
+  return doc.createElementNS(HTML_NS, tag);
+}
+
 export function registerPreferencePane(): void {
   void Zotero.PreferencePanes.register({
     pluginID: config.addonID,
@@ -140,16 +147,16 @@ function shortcutDisplay(pattern: {
 function renderChannelOrder(doc: Document, box: HTMLElement): void {
   box.replaceChildren();
   for (const meta of channelRegistry.listAll()) {
-    const row = doc.createElement("div");
+    const row = el(doc, "div");
     row.className = "ztr-prefs-row";
-    const name = doc.createElement("span");
+    const name = el(doc, "span");
     name.textContent = `${meta.name}${meta.needsConfig && !meta.configured ? " ⚠" : ""}`;
     row.append(name);
-    const up = doc.createElement("button");
+    const up = el(doc, "button");
     up.textContent = "↑";
     (up as any).dataset.channelId = meta.id;
     (up as any).dataset.dir = "up";
-    const down = doc.createElement("button");
+    const down = el(doc, "button");
     down.textContent = "↓";
     (down as any).dataset.channelId = meta.id;
     (down as any).dataset.dir = "down";
@@ -161,11 +168,11 @@ function renderChannelOrder(doc: Document, box: HTMLElement): void {
 function renderCustomChannels(doc: Document, box: HTMLElement): void {
   box.replaceChildren();
   for (const cfg of prefs.customChannels) {
-    const row = doc.createElement("div");
+    const row = el(doc, "div");
     row.className = "ztr-prefs-row";
-    const name = doc.createElement("span");
+    const name = el(doc, "span");
     name.textContent = cfg.name;
-    const del = doc.createElement("button");
+    const del = el(doc, "button");
     del.textContent = "✕";
     del.addEventListener("command", () => {
       prefs.customChannels = prefs.customChannels.filter(

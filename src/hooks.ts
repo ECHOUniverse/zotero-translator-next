@@ -25,7 +25,8 @@ async function onStartup() {
 
   // 区块（阅读器侧栏 + 条目面板）
   const { translate, summary, reader, itemPane } = addon.data;
-  registerSections(translate, summary);
+  const { readerPaneID, itemPaneID } = registerSections(translate, summary);
+  (addon.data as any).sectionKeys = { readerPaneID, itemPaneID };
 
   // 阅读器划选弹层 + 快捷键
   reader.registerSelectionPopup();
