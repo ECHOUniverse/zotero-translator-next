@@ -11,7 +11,8 @@ describe("item-pane-custom-section visibility", function () {
   it("sections are registered with pluginID-prefixed paneID", function () {
     const data = (Zotero.ItemPaneManager as any).customSectionData;
     const ids = data.options.map((o: any) => o.paneID);
-    const prefixed = `${config.addonID}-translator-reader`;
+    // Zotero 9 会对 paneID 中的特殊字符做转义（@ → \\@, . → \\.）
+    const prefixed = `${config.addonID.replace(/[.@]/g, "\\$&")}-translator-reader`;
     assert.include(
       ids,
       prefixed,
