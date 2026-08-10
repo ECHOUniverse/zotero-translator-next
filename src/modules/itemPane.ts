@@ -47,15 +47,26 @@ export class ItemPaneModule {
         l10nID: getLocaleID("item-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/save.svg",
       },
-      bodyXHTML: `<html:div id="${ITEM_SECTION_ID}" />`,
+      bodyXHTML: `<html:div id="${ITEM_SECTION_ID}"></html:div>`,
       onItemChange: ({ setEnabled, tabType }) => {
         setEnabled(tabType === "library");
         return true;
       },
       onRender: ({ body, item }) => {
-        const root = body.querySelector(`#${ITEM_SECTION_ID}`);
-        if (!root) return;
         const doc = body.ownerDocument!;
+        // 自愈：bodyXHTML 在部分版本解析失败时直接创建根元素
+        let root = body.querySelector(
+          `#${ITEM_SECTION_ID}`,
+        ) as HTMLElement | null;
+        if (!root) {
+          root = doc.createElementNS(
+            "http://www.w3.org/1999/xhtml",
+            "div",
+          ) as HTMLElement;
+          root.id = ITEM_SECTION_ID;
+          root.style.height = "100%";
+          body.appendChild(root);
+        }
         if (!root.firstChild) {
           const skeleton = buildSectionSkeleton(doc);
           root.appendChild(skeleton.root);

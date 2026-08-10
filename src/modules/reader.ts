@@ -67,26 +67,39 @@ export class ReaderModule {
         l10nID: getLocaleID("reader-section-sidenav"),
         icon: "chrome://zotero/skin/20/universal/book.svg",
       },
-      bodyXHTML: `<html:div id="${READER_SECTION_ID}" />`,
+      bodyXHTML: `<html:div id="${READER_SECTION_ID}"></html:div>`,
       onInit: () => {
         this.wireEvents();
-        this.initSectionBody();
       },
       onItemChange: ({ setEnabled, tabType }) => {
         setEnabled(tabType === "reader");
         return true;
       },
       onRender: ({ body }) => {
-        const root = body.querySelector(`#${READER_SECTION_ID}`);
-        if (!root) return;
-        // 挂载骨架
+        const doc = body.ownerDocument!;
+        // 自愈：bodyXHTML 在部分版本解析失败时直接创建根元素
+        let root = body.querySelector(
+          `#${READER_SECTION_ID}`,
+        ) as HTMLElement | null;
+        if (!root) {
+          root = doc.createElementNS(XHTML_NS, "div") as HTMLElement;
+          root.id = READER_SECTION_ID;
+          root.style.height = "100%";
+          body.appendChild(root);
+        }
+        // 挂载骨架（仅一次）
         if (!root.firstChild) {
-          const skeleton = buildSectionSkeleton(body.ownerDocument!);
+          const skeleton = buildSectionSkeleton(doc);
           root.appendChild(skeleton.root);
           this.skeleton = skeleton;
+          this.buildToolbar(doc, skeleton.toolbar);
           this.refreshView();
         }
-        void this.refreshHistory(body.ownerDocument!);
+        void this.refreshHistory(doc);
+        ztoolkit.log("reader section rendered", {
+          bodyChildren: body.children.length,
+          rootFound: Boolean(root),
+        });
       },
     });
 
@@ -120,10 +133,6 @@ export class ReaderModule {
 
   private skeleton: ReturnType<typeof buildSectionSkeleton> | null = null;
   private doc: Document | null = null;
-
-  private initSectionBody(): void {
-    // bodyXHTML 已提供根元素；骨架在 onRender 中挂载
-  }
 
   /** 构建工具栏（渠道/目标语言快捷切换 = 侧栏简版设置） */
   private buildToolbar(doc: Document, toolbar: HTMLElement): void {
