@@ -3,24 +3,20 @@ import { config } from "../package.json";
 
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
-function log(msg: string, obj?: unknown): void {
-  console.log(
-    `[ZTR-PANE-DIAG] ${msg}`,
-    obj === undefined ? "" : JSON.stringify(obj),
-  );
-}
-
 /**
  * 诊断：在真实 Zotero 9 里复现 item-pane-custom-section 渲染流程，
  * 检查 collapsible-section 的 open 状态 / --open-height / body 可见性。
  */
 describe("item-pane-custom-section visibility", function () {
-  it("sections are registered in ItemPaneManager", function () {
+  it("sections are registered with pluginID-prefixed paneID", function () {
     const data = (Zotero.ItemPaneManager as any).customSectionData;
     const ids = data.options.map((o: any) => o.paneID);
-    log("registered panes", ids);
-    assert.include(ids, "translator-reader");
-    assert.include(ids, "translator-item");
+    const prefixed = `${config.addonID}-translator-reader`;
+    assert.include(
+      ids,
+      prefixed,
+      `paneID 应被 Zotero 加 pluginID 前缀（实际注册：${ids.join(", ")}）`,
+    );
   });
 
   it("default section body is visible when open", function () {
@@ -34,123 +30,94 @@ describe("item-pane-custom-section visibility", function () {
     const body = section.querySelector('[data-type="body"]') as HTMLElement;
     const cs = getComputedStyle(body);
 
-    log("default: open attr", section.hasAttribute("open"));
-    log(
-      "default: --open-height",
-      section.style.getPropertyValue("--open-height"),
+    assert.ok(
+      section.hasAttribute("open"),
+      `默认应 open（open=${section.hasAttribute("open")}）`,
     );
-    log("default: body computed", {
-      maxHeight: cs.maxHeight,
-      visibility: cs.visibility,
-      display: cs.display,
-      height: cs.height,
-      overflowY: cs.overflowY,
-    });
-    log("default: body children", body.children.length);
-    log("default: probe text", body.textContent?.slice(0, 20));
-
-    assert.ok(section.hasAttribute("open"), "section should be open");
-    assert.notEqual(cs.visibility, "hidden", "body should be visible");
-    assert.notEqual(cs.maxHeight, "0px", "body max-height should not be 0");
+    assert.notEqual(
+      cs.visibility,
+      "hidden",
+      `body 应可见（visibility=${cs.visibility} maxHeight=${cs.maxHeight} openHeight=${section.style.getPropertyValue("--open-height")}）`,
+    );
+    assert.equal(body.children.length, 1, "bodyXHTML 内容应注入 body");
     elem.remove();
   });
 
-  it("body stays visible after manual skeleton mount (our onInit/onRender path)", function () {
+  it("collapsed section (pref=false) is invisible and recovered by forcing open", function () {
+    const paneID = "diag-pane-collapsed";
+    Zotero.Prefs.set(`panes.${paneID}.open`, false);
     const doc = Zotero.getMainWindow().document;
-    const captured: any = {};
     const elem = doc.createXULElement("item-pane-custom-section") as any;
-    elem.paneID = "diag-pane-mount";
-    elem.bodyXHTML = "";
-    elem.registerHook({
-      type: "init",
-      callback: (props: any) => {
-        captured.initBody = props.body;
-        const root = doc.createElementNS(XHTML_NS, "div");
-        root.className = "diag-root";
-        root.textContent = "mounted-in-init";
-        props.body.append(root);
-      },
-    });
-    elem.registerHook({
-      type: "render",
-      callback: (props: any) => {
-        captured.renderBody = props.body;
-        if (props.body.children.length === 0) {
-          const root = doc.createElementNS(XHTML_NS, "div");
-          root.className = "diag-root";
-          root.textContent = "mounted-in-render";
-          props.body.append(root);
-        }
-      },
-    });
+    elem.paneID = paneID;
+    elem.bodyXHTML = "<html:div>collapsed-content</html:div>";
     doc.documentElement.appendChild(elem);
 
     const section = elem.querySelector("collapsible-section") as HTMLElement;
-    const body = (captured.renderBody || captured.initBody) as HTMLElement;
-    const cs = getComputedStyle(body);
+    const body = section.querySelector('[data-type="body"]') as HTMLElement;
+    const csHidden = getComputedStyle(body);
 
-    log(
-      "mount: init body === render body",
-      captured.initBody === captured.renderBody,
-    );
-    log("mount: body children", body.children.length);
-    log("mount: root class", body.querySelector(".diag-root")?.className);
-    log("mount: open attr", section.hasAttribute("open"));
-    log(
-      "mount: --open-height",
-      section.style.getPropertyValue("--open-height"),
-    );
-    log("mount: body computed", {
-      maxHeight: cs.maxHeight,
-      visibility: cs.visibility,
-      display: cs.display,
-      height: cs.height,
-    });
-    log(
-      "mount: root computed",
-      (() => {
-        const root = body.querySelector(".diag-root");
-        if (!root) return null;
-        const rcs = getComputedStyle(root);
-        return {
-          display: rcs.display,
-          visibility: rcs.visibility,
-          height: rcs.height,
-        };
-      })(),
+    // 1) pref=false → 默认折叠 → 不可见
+    assert.equal(section.hasAttribute("open"), false, "pref=false 时应折叠");
+    assert.equal(
+      csHidden.visibility,
+      "hidden",
+      "折叠时 body 应 visibility:hidden（这正是'标题可见内容不可见'的机制）",
     );
 
-    assert.ok(body.querySelector(".diag-root"), "root should be mounted");
-    assert.notEqual(cs.visibility, "hidden");
-    assert.notEqual(cs.maxHeight, "0px");
+    // 2) 模拟我们的 ensureSectionOpen：强制展开
+    (section as any).open = true;
+    const csOpen = getComputedStyle(body);
+    assert.ok(
+      section.hasAttribute("open") && csOpen.visibility !== "hidden",
+      `强制 open 后应可见（open=${section.hasAttribute("open")} visibility=${csOpen.visibility}）`,
+    );
+
+    Zotero.Prefs.clear(`panes.${paneID}.open`);
     elem.remove();
   });
 
-  it("plugin section exists in real item-details if main window rendered it", function () {
+  it("real item-details renders plugin pane visible after selecting an item", async function () {
+    this.timeout(60000);
     const win = Zotero.getMainWindow();
     const details = win.document.querySelector("item-details");
-    if (!details) {
-      log("real: no item-details in main window");
-      return;
-    }
-    const pane = details.querySelector(
-      'item-pane-custom-section[data-pane="translator-reader"]',
+    assert.ok(details, "主窗口应有 item-details");
+
+    // 创建条目并选中，触发 item-details 渲染我们的 custom sections
+    const item = new Zotero.Item();
+    item.itemTypeID = Zotero.ItemTypes.getID("journalArticle");
+    item.setField("title", "Pane diagnostic item");
+    await item.saveTx();
+
+    (win as any).ZoteroPane.selectItem(item.id);
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const prefixed = `${config.addonID}-translator-reader`;
+    const pane = details!.querySelector(
+      `item-pane-custom-section[data-pane="${prefixed}"]`,
     ) as HTMLElement | null;
-    if (!pane) {
-      log("real: translator-reader pane not rendered yet");
-      return;
-    }
-    const section = pane.querySelector("collapsible-section") as HTMLElement;
+    assert.ok(
+      pane,
+      `item-details 中应渲染 translator-reader 区块（paneID=${prefixed}）`,
+    );
+
+    const section = pane!.querySelector("collapsible-section") as HTMLElement;
     const body = section.querySelector('[data-type="body"]') as HTMLElement;
     const cs = getComputedStyle(body);
-    log("real: open attr", section.hasAttribute("open"));
-    log("real: --open-height", section.style.getPropertyValue("--open-height"));
-    log("real: body children", body.children.length);
-    log("real: body computed", {
-      maxHeight: cs.maxHeight,
-      visibility: cs.visibility,
-      display: cs.display,
-    });
-    log("real: body innerHTML head", body.innerHTML.slice(0, 300));
+
+    assert.ok(
+      section.hasAttribute("open"),
+      `真实区块应 open（open=${section.hasAttribute("open")}）`,
+    );
+    assert.notEqual(
+      cs.visibility,
+      "hidden",
+      `真实区块 body 应可见（visibility=${cs.visibility} maxHeight=${cs.maxHeight} display=${cs.display} openHeight=${section.style.getPropertyValue("--open-height")}）`,
+    );
+    assert.ok(
+      body.children.length > 0,
+      `真实区块 body 应有内容（children=${body.children.length} html=${body.innerHTML.slice(0, 200)}）`,
+    );
+
+    await item.eraseTx();
   });
 });

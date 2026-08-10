@@ -224,6 +224,14 @@ export function forceSectionOpenHeight(body: Element): void {
   }
 }
 
+/** 确保区块处于展开状态（防止 panes.<paneID>.open pref 意外为 false 导致内容不可见） */
+export function ensureSectionOpen(body: Element): void {
+  const section = body.closest("collapsible-section") as any;
+  if (section && !section.open && !section.empty) {
+    section.open = true;
+  }
+}
+
 /** 渲染历史列表 */
 export function renderHistoryList(
   doc: Document,

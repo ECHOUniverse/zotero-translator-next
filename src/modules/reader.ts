@@ -10,6 +10,7 @@ import {
   el,
   buildSectionSkeleton,
   forceSectionOpenHeight,
+  ensureSectionOpen,
   renderResultCard,
   renderHistoryList,
   renderSummaryCard,
@@ -173,6 +174,7 @@ export class ReaderModule {
     this.buildToolbar(doc, skeleton.toolbar);
     this.refreshView();
     forceSectionOpenHeight(body);
+    ensureSectionOpen(body);
     ztoolkit.log("reader section skeleton mounted", {
       rootChildren: root.children.length,
     });

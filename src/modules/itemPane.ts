@@ -7,6 +7,7 @@ import { TranslateManager } from "./translate";
 import {
   buildSectionSkeleton,
   forceSectionOpenHeight,
+  ensureSectionOpen,
   renderResultCard,
   renderHistoryList,
   initialViewState,
@@ -135,6 +136,7 @@ export class ItemPaneModule {
     this.skeleton = skeleton;
     this.buildToolbar(doc, skeleton.toolbar);
     forceSectionOpenHeight(body);
+    ensureSectionOpen(body);
     ztoolkit.log("item section skeleton mounted");
   }
 
