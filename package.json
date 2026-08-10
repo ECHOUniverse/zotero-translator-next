@@ -1,7 +1,7 @@
 {
   "name": "zotero-translator-next",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zotero 文献翻译插件：格式优化 + 多渠道翻译 + 翻译历史 + AI 总结",
   "config": {
     "addonName": "ZoteroTranslatorNext",
