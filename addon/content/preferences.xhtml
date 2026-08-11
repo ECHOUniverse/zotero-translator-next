@@ -48,15 +48,12 @@
   <label><html:h2 data-l10n-id="pref-channels-title"></html:h2></label>
   <html:div id="ztr-channel-order" class="ztr-prefs-list" />
   <html:div data-l10n-id="pref-channels-order-hint"></html:div>
+  <checkbox
+    preference="mymemory.enabled"
+    data-l10n-id="pref-mymemory-enabled"
+  />
   <checkbox preference="bing.enabled" data-l10n-id="pref-bing-enabled" />
-  <hbox align="center" pack="start">
-    <html:label data-l10n-id="pref-bing-mode"></html:label>
-    <html:select id="ztr-bing-mode" preference="bing.mode" style="width: 12em">
-      <html:option value="edge" data-l10n-id="pref-bing-mode-edge" />
-      <html:option value="azure" data-l10n-id="pref-bing-mode-azure" />
-    </html:select>
-  </hbox>
-  <vbox id="ztr-bing-azure">
+  <vbox>
     <hbox align="center" pack="start">
       <html:label data-l10n-id="pref-azure-key"></html:label>
       <html:input

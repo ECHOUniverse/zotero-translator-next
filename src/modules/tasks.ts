@@ -18,6 +18,7 @@ import {
   type CancelToken,
 } from "../utils/cancel";
 import { channelRegistry } from "../services";
+import { MYMEMORY_MAX_CHARS } from "../services/mymemory";
 import { hashSource, addHistory, queryCache } from "./history";
 import type { TranslateChannelId } from "../services/base";
 
@@ -190,15 +191,18 @@ export class TranslateManager {
     const sourceLang = resolveSourceLang(detected, prefs.sourceLang);
     const targetLang = prefs.targetLang;
 
-    const channelId = task.channelId || "bing";
+    const channelId = task.channelId || "mymemory";
     const svc = channelRegistry.get(channelId);
     const isLLM = svc?.kind === "llm";
 
-    // 分块
+    // 分块（渠道感知：MyMemory 匿名层单请求 ≤ 500 字符）
     const chunks = isLLM
       ? chunkTextByTokens(task.formattedText, 8000)
       : chunkText(task.formattedText, {
-          maxChars: prefs.chunkMaxChars || 10000,
+          maxChars:
+            channelId === "mymemory"
+              ? MYMEMORY_MAX_CHARS
+              : prefs.chunkMaxChars || 10000,
         });
 
     const fullChunks: string[] = [];
@@ -218,8 +222,8 @@ export class TranslateManager {
             token: task.token,
           },
           (c) => {
+            // 流式回调：只累积文本（engine 在 translateWithFallback 返回后设置）
             task.translatedText += c.text;
-            task.engine = usedId;
             this.emit(task);
           },
         );

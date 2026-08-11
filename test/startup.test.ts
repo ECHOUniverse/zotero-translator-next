@@ -156,4 +156,28 @@ describe("startup", function () {
     ]);
     assert.ok(messages[0]?.value, "ztr-status-success 应有译文");
   });
+
+  it("MyMemory 渠道真实翻译（网络）", async function () {
+    this.timeout(60000);
+    const instance: any = Zotero[config.addonInstance];
+    const task = await instance.data.translate.translate({
+      sourceText: "Hello world, this is a translation pipeline test.",
+      channelId: "mymemory",
+    });
+    // 等待队列完成（最长 30s）
+    const deadline = Date.now() + 30000;
+    while (
+      ["waiting", "processing"].includes(task.status) &&
+      Date.now() < deadline
+    ) {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    assert.equal(
+      task.status,
+      "success",
+      `翻译应成功; status=${task.status} error=${task.error ?? ""}`,
+    );
+    assert.ok(task.translatedText.length > 0, "译文不应为空");
+    assert.ok(task.engine, "应记录实际渠道");
+  });
 });

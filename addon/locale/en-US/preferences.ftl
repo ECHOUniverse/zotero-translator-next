@@ -13,10 +13,8 @@ pref-context-aware = Attach context for LLM channels
 
 pref-channels-title = Channels & fallback order
 pref-channels-order-hint = Order is the fallback order (↑ first). Channels without a key are skipped.
-pref-bing-enabled = Enable Bing channel
-pref-bing-mode = Bing mode
-pref-bing-mode-edge = Edge anonymous (no key)
-pref-bing-mode-azure = Azure key (free tier)
+pref-bing-enabled = Enable Bing channel (Azure key)
+pref-mymemory-enabled = Enable MyMemory free channel (no key)
 pref-azure-key = Azure key
 pref-azure-region = Region (e.g. global / eastasia)
 pref-deepseek-enabled = Enable DeepSeek channel

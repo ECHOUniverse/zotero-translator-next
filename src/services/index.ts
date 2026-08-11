@@ -8,6 +8,7 @@
 import { prefs, type CustomChannelConfig } from "../prefs";
 import { CancelError } from "../utils/cancel";
 import { BingService } from "./bing";
+import { MyMemoryService } from "./mymemory";
 import { OpenAIService } from "./openai";
 import type {
   ChannelMeta,
@@ -17,7 +18,7 @@ import type {
   TranslateTask,
 } from "./base";
 
-export { BingService, OpenAIService };
+export { BingService, MyMemoryService, OpenAIService };
 
 export class ChannelRegistry {
   private services = new Map<string, TranslateService>();
@@ -25,6 +26,8 @@ export class ChannelRegistry {
   /** 内置渠道工厂（懒构建，读取当前偏好） */
   private buildBuiltin(id: string): TranslateService | null {
     switch (id) {
+      case "mymemory":
+        return new MyMemoryService();
       case "bing":
         return new BingService();
       case "deepseek":
@@ -68,17 +71,21 @@ export class ChannelRegistry {
       const svc = this.get(id);
       if (!svc) continue;
       const enabled =
-        id === "bing"
-          ? prefs.bingEnabled
-          : id === "deepseek"
-            ? prefs.deepseekEnabled
-            : true;
+        id === "mymemory"
+          ? prefs.mymemoryEnabled
+          : id === "bing"
+            ? prefs.bingEnabled
+            : id === "deepseek"
+              ? prefs.deepseekEnabled
+              : true;
       if (!enabled) continue;
       metas.push({
         id: svc.id,
         name: svc.name,
         kind: svc.kind,
-        needsConfig: id !== "bing" || prefs.bingMode === "azure",
+        needsConfig:
+          (id !== "mymemory" && id !== "bing") ||
+          (id === "bing" && prefs.bingMode === "azure"),
         configured: svc.isConfigured(),
         enabled,
       });
@@ -97,14 +104,18 @@ export class ChannelRegistry {
         id: svc.id,
         name: svc.name,
         kind: svc.kind,
-        needsConfig: id !== "bing" || prefs.bingMode === "azure",
+        needsConfig:
+          (id !== "mymemory" && id !== "bing") ||
+          (id === "bing" && prefs.bingMode === "azure"),
         configured: svc.isConfigured(),
         enabled:
-          id === "bing"
-            ? prefs.bingEnabled
-            : id === "deepseek"
-              ? prefs.deepseekEnabled
-              : true,
+          id === "mymemory"
+            ? prefs.mymemoryEnabled
+            : id === "bing"
+              ? prefs.bingEnabled
+              : id === "deepseek"
+                ? prefs.deepseekEnabled
+                : true,
       });
     }
     return metas;
@@ -135,11 +146,13 @@ export class ChannelRegistry {
       const svc = this.get(id);
       if (!svc) continue;
       const enabled =
-        id === "bing"
-          ? prefs.bingEnabled
-          : id === "deepseek"
-            ? prefs.deepseekEnabled
-            : true;
+        id === "mymemory"
+          ? prefs.mymemoryEnabled
+          : id === "bing"
+            ? prefs.bingEnabled
+            : id === "deepseek"
+              ? prefs.deepseekEnabled
+              : true;
       if (!enabled || !svc.isConfigured()) continue;
 
       try {

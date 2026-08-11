@@ -13,10 +13,8 @@ pref-context-aware = LLM 渠道附加上下文
 
 pref-channels-title = 渠道与回退顺序
 pref-channels-order-hint = 顺序即回退顺序（↑ 优先）。未配置 key 的渠道会被跳过。
-pref-bing-enabled = 启用必应渠道
-pref-bing-mode = 必应模式
-pref-bing-mode-edge = Edge 匿名（无需 key）
-pref-bing-mode-azure = Azure key（免费层）
+pref-bing-enabled = 启用必应渠道（Azure key）
+pref-mymemory-enabled = 启用 MyMemory 免费渠道（无需 key）
 pref-azure-key = Azure key
 pref-azure-region = Region（如 global/eastasia）
 pref-deepseek-enabled = 启用 DeepSeek 渠道

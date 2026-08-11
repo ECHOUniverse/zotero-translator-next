@@ -17,6 +17,7 @@ declare namespace _ZoteroTypes {
       "translate.contextAware": boolean;
       "cacheEnabled": boolean;
       "historyCapacity": number;
+      "mymemory.enabled": boolean;
       "bing.enabled": boolean;
       "bing.mode": string;
       "bing.azureKey": string;

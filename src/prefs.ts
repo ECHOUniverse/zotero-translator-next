@@ -116,6 +116,12 @@ export const prefs = {
   },
 
   // 渠道
+  get mymemoryEnabled() {
+    return get<boolean>("mymemory.enabled");
+  },
+  set mymemoryEnabled(v: boolean) {
+    set("mymemory.enabled", v);
+  },
   get bingEnabled() {
     return get<boolean>("bing.enabled");
   },

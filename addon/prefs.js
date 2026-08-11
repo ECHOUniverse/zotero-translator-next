@@ -15,8 +15,9 @@ pref("cacheEnabled", true);
 pref("historyCapacity", 500);
 
 // 渠道
+pref("mymemory.enabled", true);
 pref("bing.enabled", true);
-pref("bing.mode", "edge"); // edge | azure
+pref("bing.mode", "azure"); // Edge 匿名端点已关闭（2026），仅 Azure key 模式
 pref("bing.azureKey", "");
 pref("bing.azureRegion", "");
 pref("deepseek.enabled", true);
@@ -27,7 +28,7 @@ pref(
   "deepseek.prompt",
   "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation.",
 );
-pref("channelsOrder", '["bing","deepseek"]');
+pref("channelsOrder", '["mymemory","deepseek","bing"]');
 pref("customChannels", "[]");
 
 // 快捷键（JSON: {ctrl,shift,alt,meta,key}）

@@ -38,7 +38,7 @@ function el(doc: Document, tag: string): any {
 }
 
 /** 工具栏当前选中的渠道（翻译入口读取） */
-let selectedChannelId = "bing";
+let selectedChannelId = "mymemory";
 export function getSelectedChannelId(): string {
   return selectedChannelId;
 }
@@ -438,7 +438,7 @@ function buildToolbar(
     opt.disabled = !meta.enabled || !meta.configured;
     channelSelect.append(opt);
   }
-  channelSelect.value = prefs.channelsOrder[0] ?? "bing";
+  channelSelect.value = prefs.channelsOrder[0] ?? "mymemory";
   channelSelect.addEventListener("change", () => {
     selectedChannelId = channelSelect.value;
   });

@@ -39,19 +39,8 @@ export function initPrefsWindow(win: Window): void {
     renderChannelOrder(doc, orderBox);
   }
 
-  // Bing 模式联动
-  const modeSelect = doc.querySelector(
-    "#ztr-bing-mode",
-  ) as HTMLSelectElement | null;
-  if (modeSelect) {
-    modeSelect.addEventListener("command", () => {
-      prefs.bingMode = modeSelect.value as "edge" | "azure";
-      const azureBox = doc.querySelector(
-        "#ztr-bing-azure",
-      ) as HTMLElement | null;
-      if (azureBox) azureBox.hidden = modeSelect.value !== "azure";
-    });
-  }
+  // Bing 仅 Azure key 模式（Edge 匿名端点已关闭）
+  void doc.querySelector("#ztr-bing-mode");
 
   // 自定义渠道增删
   const customBox = doc.querySelector(
