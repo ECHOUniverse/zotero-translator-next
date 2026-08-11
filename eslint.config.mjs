@@ -12,5 +12,16 @@ export default zotero({
         "@typescript-eslint/no-unused-vars": "off",
       },
     },
+    {
+      // 图标生成脚本运行在 Node 环境
+      files: ["scripts/**/*.mjs"],
+      languageOptions: {
+        globals: {
+          console: "readonly",
+          process: "readonly",
+          globalThis: "readonly",
+        },
+      },
+    },
   ],
 });
