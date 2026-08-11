@@ -27,6 +27,7 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
     "test": "zotero-plugin test",
+    "icons:export": "node scripts/icon-gen.mjs --all",
     "update-deps": "npm update --save",
     "test:unit": "mocha --require tsx 'test/unit/**/*.test.ts'"
   },
@@ -34,6 +35,7 @@
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.10.0",
@@ -42,10 +44,11 @@
     "eslint": "^9.39.2",
     "mocha": "^11.7.5",
     "prettier": "^3.7.4",
+    "sharp": "^0.35.3",
+    "tsx": "^4.19.0",
     "typescript": "^5.9.3",
     "zotero-plugin-scaffold": "^0.8.2",
-    "zotero-types": "^4.1.0-beta.4",
-    "tsx": "^4.19.0"
+    "zotero-types": "^4.1.0-beta.4"
   },
   "prettier": {
     "printWidth": 80,

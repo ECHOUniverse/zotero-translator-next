@@ -1,5 +1,9 @@
 # ZoteroTranslatorNext
 
+<p align="center">
+  <img src="assets/banner.png" alt="ZoteroTranslatorNext" width="720"/>
+</p>
+
 > Zotero 文献翻译插件：**格式优化 + 多渠道翻译 + 翻译历史 + AI 总结**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
@@ -36,12 +40,12 @@
 
 **默认渠道 MyMemory**（免费、无需配置）。如需更稳定/大量翻译，在设置中配置：
 
-| 渠道 | 配置 | 说明 |
-|---|---|---|
-| MyMemory | 无需配置 | 免费匿名，单请求 ≤500 字符（自动分块），有日配额 |
-| DeepSeek | API Key | `https://api.deepseek.com` + `deepseek-chat`，流式 |
-| Bing (Azure) | Azure Key + Region | 官方认知服务，F0 免费层 2M 字符/月 |
-| 自定义 | Base URL + Key + Model | 任意 OpenAI 兼容服务（可多个） |
+| 渠道         | 配置                   | 说明                                               |
+| ------------ | ---------------------- | -------------------------------------------------- |
+| MyMemory     | 无需配置               | 免费匿名，单请求 ≤500 字符（自动分块），有日配额   |
+| DeepSeek     | API Key                | `https://api.deepseek.com` + `deepseek-chat`，流式 |
+| Bing (Azure) | Azure Key + Region     | 官方认知服务，F0 免费层 2M 字符/月                 |
+| 自定义       | Base URL + Key + Model | 任意 OpenAI 兼容服务（可多个）                     |
 
 渠道顺序即回退顺序（设置中 ↑↓ 调整）；未配置 key 的渠道自动跳过。
 
