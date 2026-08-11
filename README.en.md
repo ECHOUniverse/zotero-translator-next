@@ -36,12 +36,12 @@
 
 **The default channel is MyMemory** (free, no configuration needed). For more stable or high-volume translation, configure a channel in the preferences:
 
-| Channel | Configuration | Notes |
-|---|---|---|
-| MyMemory | none | Free anonymous; ≤500 chars per request (auto-chunked); daily quota |
-| DeepSeek | API Key | `https://api.deepseek.com` + `deepseek-chat`, streaming |
-| Bing (Azure) | Azure Key + Region | Official Cognitive Services; F0 free tier 2M chars/month |
-| Custom | Base URL + Key + Model | Any OpenAI-compatible service (multiple allowed) |
+| Channel      | Configuration          | Notes                                                              |
+| ------------ | ---------------------- | ------------------------------------------------------------------ |
+| MyMemory     | none                   | Free anonymous; ≤500 chars per request (auto-chunked); daily quota |
+| DeepSeek     | API Key                | `https://api.deepseek.com` + `deepseek-chat`, streaming            |
+| Bing (Azure) | Azure Key + Region     | Official Cognitive Services; F0 free tier 2M chars/month           |
+| Custom       | Base URL + Key + Model | Any OpenAI-compatible service (multiple allowed)                   |
 
 Channel order is the fallback order (adjust with ↑↓ in settings); channels without a key are skipped automatically.
 
