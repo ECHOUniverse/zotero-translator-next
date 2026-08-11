@@ -179,5 +179,39 @@ describe("startup", function () {
     );
     assert.ok(task.translatedText.length > 0, "译文不应为空");
     assert.ok(task.engine, "应记录实际渠道");
+
+    // 历史落库验证：全局历史应包含此记录；按 itemID 查询应命中
+    const { getHistoryByItem } = await import("../src/modules/history");
+    const globalHistory = await getHistoryByItem(null, 10);
+    assert.ok(
+      globalHistory.some((h) => h.sourceText === task.sourceText),
+      "翻译记录应写入历史（全局查询命中）",
+    );
+    if (task.itemID != null) {
+      const itemHistory = await getHistoryByItem(task.itemID, 10);
+      assert.ok(
+        itemHistory.some((h) => h.sourceText === task.sourceText),
+        "按 itemID 查询应命中",
+      );
+    }
+
+    // UI 验证：区块历史容器应自动刷新出记录（subscribe 回调）
+    const win2 = Zotero.getMainWindows()[0];
+    const section2 = win2?.document.querySelector(
+      'item-pane-custom-section[data-pane$="-translator-item"]',
+    );
+    if (section2) {
+      const deadline2 = Date.now() + 5000;
+      let historyCount = 0;
+      while (Date.now() < deadline2) {
+        historyCount = section2.querySelectorAll(".ztr-history-item").length;
+        if (historyCount > 0) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      assert.ok(
+        historyCount > 0,
+        "翻译成功后历史容器应自动出现记录（subscribe 刷新）",
+      );
+    }
   });
 });

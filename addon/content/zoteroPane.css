@@ -243,3 +243,14 @@
     color: #eee;
   }
 }
+
+/* 历史条目标注 */
+.ztr-history-source {
+  font-size: 11px;
+  color: var(--accent-blue, #4072e5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 1px;
+}

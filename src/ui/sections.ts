@@ -206,7 +206,7 @@ function initCtx(
     unsubscribe: null,
   };
   contexts.set(ctxKey(init.body), ctx);
-  // 订阅任务状态变化：更新结果容器（不触发区块级渲染）
+  // 订阅任务状态变化：更新结果容器 + 成功时刷新历史列表（不触发区块级渲染）
   ctx.unsubscribe = translate.subscribe((task) => {
     if (!ctx.rendered) return;
     const root = sectionRoot(ctx);
@@ -214,6 +214,8 @@ function initCtx(
     renderResultCard(ctx, task);
     if (task.status === "success") {
       lastSuccessTask = task;
+      // 新翻译落库后刷新历史（含全局历史场景）
+      void refreshHistoryFor(ctx);
     }
   });
 }
@@ -510,7 +512,8 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
   const box = historyBox(ctx);
   if (!box) return;
   const doc = ctx.doc;
-  const entries = ctx.itemID ? await getHistoryByItem(ctx.itemID, 20) : [];
+  // 全局最近历史（任何来源的翻译都可查；条目信息在条目上标注）
+  const entries = await getHistoryByItem(null, 20);
   box.replaceChildren();
   if (entries.length === 0) {
     box.append(emptyState(doc, getString("ztr-empty-history")));
@@ -556,6 +559,18 @@ function historyItem(
   head.append(del);
   row.append(head);
 
+  // 来源条目标注（全局历史时区分来源）
+  if (entry.itemID != null) {
+    const itemTitle = getItemTitle(entry.itemID);
+    if (itemTitle) {
+      const src = el(doc, "div");
+      src.className = "ztr-history-source";
+      src.textContent = itemTitle;
+      src.title = itemTitle;
+      row.append(src);
+    }
+  }
+
   const preview = el(doc, "div");
   preview.className = "ztr-history-preview";
   preview.textContent =
@@ -563,6 +578,15 @@ function historyItem(
     (entry.translatedText.length > 120 ? "…" : "");
   row.append(preview);
   return row;
+}
+
+function getItemTitle(itemID: number): string {
+  try {
+    const item = Zotero.Items.get(itemID);
+    return item?.getField("title") ?? "";
+  } catch {
+    return "";
+  }
 }
 
 // ---------------------------------------------------------------------------

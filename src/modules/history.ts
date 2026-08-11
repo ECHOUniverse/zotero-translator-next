@@ -127,17 +127,25 @@ export async function queryCache(
   return row ? (row as HistoryEntry) : null;
 }
 
-/** 按条目查询历史（最新在前） */
+/** 按条目查询历史（最新在前）；itemID 为 null 时返回全局最近历史 */
 export async function getHistoryByItem(
-  itemID: number,
+  itemID: number | null,
   limit = 50,
 ): Promise<HistoryEntry[]> {
-  const rows = await Zotero.DB.queryAsync(
-    `SELECT * FROM ${TABLE}
-     WHERE itemID = ?
-     ORDER BY createdAt DESC LIMIT ?`,
-    [itemID, limit],
-  );
+  const rows =
+    itemID == null
+      ? await Zotero.DB.queryAsync(
+          `SELECT * FROM ${TABLE}
+         ORDER BY createdAt DESC LIMIT ?`,
+          [limit],
+        )
+      : // SQLite `IS` 运算符：正确匹配 NULL（`= NULL` 恒为 false）
+        await Zotero.DB.queryAsync(
+          `SELECT * FROM ${TABLE}
+         WHERE itemID IS ?
+         ORDER BY createdAt DESC LIMIT ?`,
+          [itemID, limit],
+        );
   return (rows ?? []) as HistoryEntry[];
 }
 
@@ -169,12 +177,18 @@ export async function deleteHistory(id: number): Promise<void> {
   });
 }
 
-/** 按条目删除 */
-export async function deleteHistoryByItem(itemID: number): Promise<void> {
+/** 按条目删除（itemID 为 null 时删除未关联条目的记录） */
+export async function deleteHistoryByItem(
+  itemID: number | null,
+): Promise<void> {
   await Zotero.DB.executeTransaction(async () => {
-    await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID = ?`, [
-      itemID,
-    ]);
+    if (itemID == null) {
+      await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID IS NULL`);
+    } else {
+      await Zotero.DB.queryAsync(`DELETE FROM ${TABLE} WHERE itemID IS ?`, [
+        itemID,
+      ]);
+    }
   });
 }
 
