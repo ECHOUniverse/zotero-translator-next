@@ -16,3 +16,7 @@ build
 logs
 # 子代理运行产物（不入库）
 .pi-subagents/
+
+# AI agent 产物（不入库）
+AGENTS.md
+docs/agents/
