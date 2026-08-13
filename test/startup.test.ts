@@ -158,8 +158,13 @@ describe("startup", function () {
   });
 
   it("MyMemory 渠道真实翻译（网络）", async function () {
-    // CI 环境网络不稳定，真实 HTTP 调用会偶发失败；本地开发环境照常执行
-    if (process.env.CI) {
+    // 测试运行在 Zotero（Firefox）进程内，无 Node 的 process 全局，
+    // 需通过 Services.env 读取环境变量；CI 网络不稳定，真实 HTTP 调用会偶发失败
+    const isCI =
+      typeof Services !== "undefined" &&
+      Services.env.exists("CI") &&
+      Services.env.get("CI") === "true";
+    if (isCI) {
       this.skip();
       return;
     }
