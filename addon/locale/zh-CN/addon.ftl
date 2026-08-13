@@ -28,6 +28,8 @@ ztr-original = 原文
 ztr-formatted = 格式化
 ztr-translated = 译文
 ztr-delete = 删除
+ztr-expand = 展开
+ztr-collapse = 收起
 
 # 划选弹层
 ztr-translate-selection = 翻译选中内容

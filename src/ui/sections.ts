@@ -527,8 +527,11 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
   }
   const list = el(doc, "div");
   list.className = "ztr-history-list";
+  // 展开按钮可见性依赖布局，须在全部节点挂载后统一测量
+  const measurable: { preview: HTMLDivElement; toggle: HTMLButtonElement }[] =
+    [];
   for (const entry of entries) {
-    const { row, container } = historyItem(doc, entry, {
+    const { row, container, preview, toggle } = historyItem(doc, entry, {
       onDelete: () => {
         void deleteHistory(entry.id).then(() => refreshHistoryFor(ctx));
       },
@@ -540,15 +543,25 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
       },
     });
     list.append(row, container);
+    measurable.push({ preview, toggle });
   }
   box.append(list);
+  // 挂载后测量：仅当文本溢出 3 行截断线时才显示展开按钮
+  for (const { preview, toggle } of measurable) {
+    toggle.hidden = preview.scrollHeight <= preview.clientHeight;
+  }
 }
 
 function historyItem(
   doc: Document,
   entry: HistoryEntry,
   handlers: { onDelete: () => void; onSummarize: () => void },
-): { row: HTMLDivElement; container: HTMLDivElement } {
+): {
+  row: HTMLDivElement;
+  container: HTMLDivElement;
+  preview: HTMLDivElement;
+  toggle: HTMLButtonElement;
+} {
   const row = el(doc, "div");
   row.className = "ztr-history-item";
   const head = el(doc, "div");
@@ -596,18 +609,29 @@ function historyItem(
     }
   }
 
+  // 全文渲染，CSS 3 行截断（.ztr-history-preview）；超长时由调用方测量后显示展开按钮
   const preview = el(doc, "div");
   preview.className = "ztr-history-preview";
-  preview.textContent =
-    entry.translatedText.slice(0, 120) +
-    (entry.translatedText.length > 120 ? "…" : "");
+  preview.textContent = entry.translatedText;
   row.append(preview);
+
+  const toggle = el(doc, "button");
+  toggle.className = "ztr-history-toggle";
+  toggle.hidden = true;
+  toggle.textContent = `${getString("ztr-expand")} ▾`;
+  toggle.addEventListener("click", () => {
+    const expanded = row.classList.toggle("expanded");
+    toggle.textContent =
+      (expanded ? getString("ztr-collapse") : getString("ztr-expand")) +
+      (expanded ? " ▴" : " ▾");
+  });
+  row.append(toggle);
 
   // 内联总结容器（跟随条目；多条历史可各自总结）
   const container = el(doc, "div");
   container.className = "ztr-inline-summary";
   container.hidden = true;
-  return { row, container };
+  return { row, container, preview, toggle };
 }
 
 function getItemTitle(itemID: number): string {

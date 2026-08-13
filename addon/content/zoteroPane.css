@@ -221,6 +221,32 @@
   white-space: pre-wrap;
   word-break: break-word;
   margin-top: 2px;
+  /* 长文本固定显示 3 行，超长由展开按钮控制 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* 展开态：取消行数限制，显示全文 */
+.ztr-history-item.expanded .ztr-history-preview {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+/* 展开/收起按钮（仅文本溢出时可见，挂载后由 JS 测量决定） */
+.ztr-history-toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--accent-blue, #4072e5);
+}
+
+.ztr-history-toggle[hidden] {
+  display: none;
 }
 
 .ztr-empty {

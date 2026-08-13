@@ -28,6 +28,8 @@ ztr-original = Original
 ztr-formatted = Formatted
 ztr-translated = Translated
 ztr-delete = Delete
+ztr-expand = Expand
+ztr-collapse = Collapse
 
 # Selection popup
 ztr-translate-selection = Translate selection
