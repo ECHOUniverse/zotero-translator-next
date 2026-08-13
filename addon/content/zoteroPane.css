@@ -290,6 +290,11 @@
 }
 
 /* 跨区域选区（内嵌于 reader 区块，工具栏与「当前翻译」之间） */
+/* 无选区时隐藏（骨架用 hidden="true"：XUL XML 解析不接受无值属性） */
+.ztr-selection[hidden] {
+  display: none;
+}
+
 .ztr-selection-card {
   gap: 6px;
 }

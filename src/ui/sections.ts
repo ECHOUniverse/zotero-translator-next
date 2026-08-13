@@ -274,7 +274,7 @@ function readerBodyXHTML(): string {
 <html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
 <html:div class="ztr-section" id="ztr-reader-section">
   <html:div class="ztr-toolbar" id="ztr-reader-toolbar"></html:div>
-  <html:div class="ztr-selection" id="ztr-reader-selection" hidden></html:div>
+  <html:div class="ztr-selection" id="ztr-reader-selection" hidden="true"></html:div>
   <html:div class="ztr-section-title-row" id="ztr-reader-current-title"></html:div>
   <html:div class="ztr-result" id="ztr-reader-result"></html:div>
   <html:div class="ztr-summary" id="ztr-reader-summary"></html:div>
