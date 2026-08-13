@@ -216,6 +216,12 @@ export const prefs = {
   set summaryPrompt(v: string) {
     set("summary.prompt", v);
   },
+  get summaryLang() {
+    return get<string>("summary.lang");
+  },
+  set summaryLang(v: string) {
+    set("summary.lang", v);
+  },
 
   // 格式化规则开关
   get formatterMergeLineBreaks() {

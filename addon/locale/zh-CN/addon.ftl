@@ -37,6 +37,17 @@ ztr-translate-item = 翻译选中条目
 ztr-summarizing = 总结中…
 ztr-save-summary = 存入历史
 ztr-summary-saved = 已保存
+ztr-summary-save-fail = 未找到对应历史记录
+ztr-copy-summary = 复制总结
+ztr-summary-copied = 已复制
+ztr-save-note = 写入笔记
+ztr-note-saved = 已写入笔记
+ztr-note-save-fail = 写入笔记失败
+ztr-regenerate = 重新生成
+ztr-no-note-item = 无关联条目，无法写入笔记
+ztr-summary-no-llm = 总结功能需要配置 DeepSeek 或自定义 OpenAI 渠道。
+ztr-open-settings = 打开设置
+ztr-no-translated = 暂无已翻译内容
 
 # 右键菜单
 ztr-menuitem-translate-abstract =

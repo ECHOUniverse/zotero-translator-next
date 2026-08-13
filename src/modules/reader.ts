@@ -8,21 +8,37 @@
 
 import { prefs } from "../prefs";
 import { getString } from "../utils/locale";
-import { createCancelToken, CancelError } from "../utils/cancel";
-import type { TranslateManager } from "./tasks";
+import type { TranslateManager, TranslateTaskInfo } from "./tasks";
 import type { SummaryManager } from "./summary";
-import { getSelectedChannelId } from "../ui/sections";
+import { getSelectedChannelId, getLastSuccessTask } from "../ui/sections";
+
+export interface ReaderOptions {
+  /**
+   * 总结回调（由 addon.ts 装配注入 sections 的窗格渲染函数，
+   * 避免 ReaderModule 反向依赖 UI 区块上下文）。
+   */
+  onSummarize?: (task: TranslateTaskInfo, kind: "reader" | "item") => void;
+}
 
 export class ReaderModule {
   private translate: TranslateManager;
   private summary: SummaryManager;
+  private onSummarize?: (
+    task: TranslateTaskInfo,
+    kind: "reader" | "item",
+  ) => void;
   private lastSelectionText = "";
   private lastSelectionTime = 0;
   private autoDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(translate: TranslateManager, summary: SummaryManager) {
+  constructor(
+    translate: TranslateManager,
+    summary: SummaryManager,
+    options: ReaderOptions = {},
+  ) {
     this.translate = translate;
     this.summary = summary;
+    this.onSummarize = options.onSummarize;
   }
 
   /** 注册划选弹层按钮（startup 调用；插件卸载自动注销） */
@@ -120,13 +136,40 @@ export class ReaderModule {
       .catch((e) => ztoolkit.log(e.message));
   }
 
-  /** 总结最近一次翻译结果 */
+  /** 总结最近一次翻译结果（快捷键入口，D6） */
   async summarizeLastSelection(): Promise<void> {
-    ztoolkit.log("summary shortcut");
-    // 简单实现：取最近成功任务（由 UI 层按钮触发完整流程）
-    // 快捷键只对已翻译内容生效
-    const task = this.translate.getCurrent();
-    void task;
+    const task = getLastSuccessTask();
+    if (!task) {
+      // 暂无已翻译内容：原生提示
+      const Prompt = (Zotero as any).Prompt;
+      if (Prompt?.confirm) {
+        try {
+          Prompt.confirm({
+            title: getString("ztr-summarize"),
+            text: getString("ztr-no-translated"),
+            button0: getString("ztr-cancel"),
+          });
+        } catch (e) {
+          ztoolkit.log(
+            `[reader] summary prompt error: ${(e as Error).message}`,
+          );
+        }
+      }
+      return;
+    }
+    this.onSummarize?.(task, this.currentPaneKind());
+  }
+
+  /** 当前窗格类型：阅读器 tab → 阅读器窗格；主窗口 → 条目窗格 */
+  private currentPaneKind(): "reader" | "item" {
+    try {
+      const win = Zotero.getMainWindows()[0] as any;
+      const tabID = win?.Zotero_Tabs?.selectedID;
+      if (tabID && Zotero.Reader.getByTabID(tabID)) return "reader";
+    } catch {
+      // 忽略，回落条目窗格
+    }
+    return "item";
   }
 
   private getCurrentReader(): _ZoteroTypes.ReaderInstance | undefined {

@@ -30,6 +30,15 @@ pref-shortcuts-title = 快捷键（点击输入框后按键）
 pref-shortcut-translate = 翻译
 pref-shortcut-summary = 总结
 
+pref-summary-title = 总结
+pref-summary-lang = 总结语言
+pref-summary-lang-auto = 跟随目标语言
+pref-summary-lang-custom = 自定义…
+pref-summary-model = 总结模型
+pref-summary-model-hint = 留空 = 使用当前 LLM 渠道默认模型
+pref-summary-prompt = 总结提示词
+pref-summary-prompt-hint = 留空 = 默认结构化模板（研究问题/方法/主要发现/结论/局限）；{targetLang} 会被替换为实际语言名
+
 pref-format-title = 格式化规则
 pref-fmt-merge = 合并硬换行
 pref-fmt-hyphen = 修复连字符断词

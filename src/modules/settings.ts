@@ -18,13 +18,38 @@ function el(doc: Document, tag: string): any {
   return doc.createElementNS(HTML_NS, tag);
 }
 
-export function registerPreferencePane(): void {
-  void Zotero.PreferencePanes.register({
+/** 已注册的偏好面板 id（openPreferences 定位用） */
+let preferencePaneID: string | null = null;
+
+export async function registerPreferencePane(): Promise<void> {
+  preferencePaneID = await Zotero.PreferencePanes.register({
     pluginID: config.addonID,
     src: "content/preferences.xhtml",
     label: getString("ztr-prefs-title"),
     image: `chrome://${config.addonRef}/content/icons/favicon@0.5x.png`,
   });
+}
+
+/** 打开插件偏好面板（无 LLM 渠道提示的"打开设置"直达入口） */
+export function openPluginPreferences(): void {
+  try {
+    const opener = (Zotero.Utilities.Internal as any)?.openPreferences;
+    if (typeof opener === "function") {
+      opener(preferencePaneID);
+      return;
+    }
+  } catch {
+    // 回落：直接打开偏好窗口（默认页）
+  }
+  try {
+    Zotero.getMainWindows()[0]?.openDialog(
+      "chrome://zotero/content/preferences/preferences.xhtml",
+      "zotero-prefs",
+      "chrome,titlebar,centerscreen,resizable=yes",
+    );
+  } catch {
+    // 忽略
+  }
 }
 
 /** 偏好窗口加载时：初始化交互逻辑 */
@@ -82,6 +107,9 @@ export function initPrefsWindow(win: Window): void {
     });
   }
 
+  // 总结语言下拉（自定义值输入框与 summary.lang 直接绑定）
+  initSummaryLangUI(doc);
+
   // 清空历史
   const clearBtn = doc.querySelector(
     "#ztr-clear-history",
@@ -114,6 +142,42 @@ export function initPrefsWindow(win: Window): void {
     }
     prefs.channelsOrder = order;
     renderChannelOrder(doc, orderBox);
+  });
+}
+
+/**
+ * 总结语言下拉：已知语言码直选；其余值（含自定义输入）落到"自定义…"项。
+ * 自定义输入框与 summary.lang 直接绑定（preference 属性）。
+ */
+function initSummaryLangUI(doc: Document): void {
+  const select = doc.querySelector(
+    "#ztr-summary-lang",
+  ) as HTMLSelectElement | null;
+  const custom = doc.querySelector(
+    "#ztr-summary-lang-custom",
+  ) as HTMLInputElement | null;
+  if (!select || !custom) return;
+
+  const KNOWN = ["auto", "zh-CN", "zh-TW", "en", "ja", "ko"];
+  const syncSelect = () => {
+    const v = prefs.summaryLang;
+    if (KNOWN.includes(v)) {
+      select.value = v;
+      custom.hidden = true;
+    } else {
+      select.value = "__custom__";
+      custom.hidden = false;
+    }
+  };
+  syncSelect();
+  select.addEventListener("change", () => {
+    if (select.value === "__custom__") {
+      custom.hidden = false;
+      custom.focus();
+    } else {
+      custom.hidden = true;
+      prefs.summaryLang = select.value;
+    }
   });
 }
 

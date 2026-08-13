@@ -30,6 +30,15 @@ pref-shortcuts-title = Shortcuts (click a field, then press keys)
 pref-shortcut-translate = Translate
 pref-shortcut-summary = Summary
 
+pref-summary-title = Summary
+pref-summary-lang = Summary language
+pref-summary-lang-auto = Follow target language
+pref-summary-lang-custom = Custom…
+pref-summary-model = Summary model
+pref-summary-model-hint = Leave empty to use the current LLM channel's default model
+pref-summary-prompt = Summary prompt
+pref-summary-prompt-hint = Leave empty for the default structured template (research question/method/findings/conclusions/limitations); {targetLang} is replaced with the actual language name
+
 pref-format-title = Formatting rules
 pref-fmt-merge = Merge hard line breaks
 pref-fmt-hyphen = Fix hyphenated word breaks

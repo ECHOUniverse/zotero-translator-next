@@ -5,6 +5,7 @@ import { TranslateManager } from "./modules/tasks";
 import { SummaryManager } from "./modules/summary";
 import { ReaderModule } from "./modules/reader";
 import { ItemPaneModule } from "./modules/itemPane";
+import { summarizeTaskIn } from "./ui/sections";
 
 class Addon {
   public data: {
@@ -39,7 +40,12 @@ class Addon {
       ztoolkit: createZToolkit(),
       translate,
       summary,
-      reader: new ReaderModule(translate, summary),
+      reader: new ReaderModule(translate, summary, {
+        // 总结快捷键桥（D6）：渲染到对应窗格
+        onSummarize: (task, kind) => {
+          summarizeTaskIn(kind, task);
+        },
+      }),
       itemPane: new ItemPaneModule(translate),
     };
     this.hooks = hooks;

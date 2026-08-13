@@ -37,6 +37,17 @@ ztr-translate-item = Translate selected item
 ztr-summarizing = Summarizing…
 ztr-save-summary = Save to history
 ztr-summary-saved = Saved
+ztr-summary-save-fail = No matching history entry found
+ztr-copy-summary = Copy summary
+ztr-summary-copied = Copied
+ztr-save-note = Save to note
+ztr-note-saved = Note updated
+ztr-note-save-fail = Failed to write note
+ztr-regenerate = Regenerate
+ztr-no-note-item = No linked item, cannot write note
+ztr-summary-no-llm = Summarization requires a DeepSeek or custom OpenAI channel.
+ztr-open-settings = Open Settings
+ztr-no-translated = No translated content yet
 
 # Context menu
 ztr-menuitem-translate-abstract =

@@ -36,10 +36,11 @@ pref("shortcut.translate", '{"ctrl":true,"shift":true,"key":"T"}');
 pref("shortcut.summary", '{"ctrl":true,"shift":true,"key":"S"}');
 
 // 总结
+pref("summary.lang", "auto"); // auto = 跟随翻译目标语言
 pref("summary.model", "");
 pref(
   "summary.prompt",
-  "You are an academic assistant. Summarize the following translated text in {targetLang}: key findings, methods and conclusions. Be concise (within 300 words).",
+  "你是学术助理。请用 {targetLang} 对以下翻译文本进行结构化总结：\n## 研究问题\n## 研究方法\n## 主要发现\n## 结论\n## 局限（如原文提及）\n控制在 300 字以内，基于文本内容，不要编造。",
 );
 
 // 格式化规则开关

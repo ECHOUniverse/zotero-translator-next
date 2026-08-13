@@ -76,3 +76,27 @@ export function resolveSourceLang(
   if (!detected || detected === "other") return "auto";
   return normalizeLangCode(detected);
 }
+
+/** 语言码 → 人类可读语言名（总结提示词 {targetLang} 插值用） */
+const LANG_DISPLAY_NAMES: Record<string, string> = {
+  "zh-CN": "中文",
+  "zh-TW": "繁體中文",
+  en: "English",
+  "en-US": "English",
+  "en-GB": "English",
+  ja: "日本語",
+  ko: "한국어",
+  de: "Deutsch",
+  fr: "Français",
+  ru: "Русский",
+  es: "Español",
+  it: "Italiano",
+  pt: "Português",
+  ar: "العربية",
+};
+
+/** 语言名映射：zh-CN → 中文，en-US → English；映射缺失时回退原文代号 */
+export function langDisplayName(code: string): string {
+  const key = (code ?? "").trim();
+  return LANG_DISPLAY_NAMES[key] ?? (key || "中文");
+}

@@ -31,6 +31,7 @@ declare namespace _ZoteroTypes {
       "customChannels": string;
       "shortcut.translate": string;
       "shortcut.summary": string;
+      "summary.lang": string;
       "summary.model": string;
       "summary.prompt": string;
       "formatter.mergeLineBreaks": boolean;

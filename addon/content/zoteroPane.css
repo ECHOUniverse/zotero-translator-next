@@ -200,6 +200,20 @@
   justify-content: space-between;
 }
 
+/* 历史条目工具按钮组（总结/删除） */
+.ztr-history-tools {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 历史条目内联总结容器（跟随条目；复用 .ztr-card 样式） */
+.ztr-inline-summary {
+  margin: 2px 0 4px 12px;
+  border-left: 2px solid var(--color-border50, #eee);
+  padding-left: 8px;
+}
+
 .ztr-history-preview {
   font-size: 12px;
   line-height: 1.4;

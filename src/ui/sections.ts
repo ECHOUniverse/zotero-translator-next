@@ -25,7 +25,12 @@ import type { HistoryEntry } from "../modules/history";
 import { prefs } from "../prefs";
 import { channelRegistry } from "../services";
 import type { SummaryManager } from "../modules/summary";
-import { createCancelToken, CancelError } from "../utils/cancel";
+import {
+  createCancelToken,
+  CancelError,
+  type CancelToken,
+} from "../utils/cancel";
+import { openPluginPreferences } from "../modules/settings";
 
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
@@ -371,10 +376,11 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
         });
       }),
     );
-    if (task.status === "success" && summaryManager?.hasAvailableLLM()) {
+    // AI 总结按钮常驻（D2）：无可用 LLM 渠道时点击提示配置
+    if (task.status === "success") {
       actions.append(
         actionButton(doc, getString("ztr-summarize"), () => {
-          void runSummary(ctx, task);
+          onSummarizeClick(ctx, taskToSummarySource(task));
         }),
       );
     }
@@ -522,11 +528,18 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
   const list = el(doc, "div");
   list.className = "ztr-history-list";
   for (const entry of entries) {
-    list.append(
-      historyItem(doc, entry, () => {
+    const { row, container } = historyItem(doc, entry, {
+      onDelete: () => {
         void deleteHistory(entry.id).then(() => refreshHistoryFor(ctx));
-      }),
-    );
+      },
+      // 历史条目总结入口（D3）：内联展开在该条目下方，互不串台
+      onSummarize: () => {
+        if (startSummary(ctx, historyToSummarySource(entry), container)) {
+          container.hidden = false;
+        }
+      },
+    });
+    list.append(row, container);
   }
   box.append(list);
 }
@@ -534,8 +547,8 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
 function historyItem(
   doc: Document,
   entry: HistoryEntry,
-  onDelete: () => void,
-): HTMLDivElement {
+  handlers: { onDelete: () => void; onSummarize: () => void },
+): { row: HTMLDivElement; container: HTMLDivElement } {
   const row = el(doc, "div");
   row.className = "ztr-history-item";
   const head = el(doc, "div");
@@ -548,15 +561,27 @@ function historyItem(
   engine.className = "ztr-badge ztr-badge-channel";
   engine.textContent = channelRegistry.get(entry.engine)?.name ?? entry.engine;
   head.append(engine);
+  const tools = el(doc, "span");
+  tools.className = "ztr-history-tools";
+  const summarize = el(doc, "button");
+  summarize.className = "ztr-icon-btn";
+  summarize.textContent = "✨";
+  summarize.title = getString("ztr-summarize");
+  summarize.addEventListener("click", (e: Event) => {
+    e.stopPropagation();
+    handlers.onSummarize();
+  });
+  tools.append(summarize);
   const del = el(doc, "button");
   del.className = "ztr-icon-btn";
   del.textContent = "🗑";
   del.title = getString("ztr-delete");
   del.addEventListener("click", (e: Event) => {
     e.stopPropagation();
-    onDelete();
+    handlers.onDelete();
   });
-  head.append(del);
+  tools.append(del);
+  head.append(tools);
   row.append(head);
 
   // 来源条目标注（全局历史时区分来源）
@@ -577,7 +602,12 @@ function historyItem(
     entry.translatedText.slice(0, 120) +
     (entry.translatedText.length > 120 ? "…" : "");
   row.append(preview);
-  return row;
+
+  // 内联总结容器（跟随条目；多条历史可各自总结）
+  const container = el(doc, "div");
+  container.className = "ztr-inline-summary";
+  container.hidden = true;
+  return { row, container };
 }
 
 function getItemTitle(itemID: number): string {
@@ -590,17 +620,113 @@ function getItemTitle(itemID: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// 总结卡片
+// 总结
 // ---------------------------------------------------------------------------
 
+/** 可总结对象：最新翻译任务或历史条目（runSummary 统一入口） */
+export interface SummarySource {
+  /** 待总结文本（译文） */
+  translatedText: string;
+  /** 格式化后文本（存历史时用于 hash 定位） */
+  formattedText: string;
+  /** 实际渠道（历史条目可能为空） */
+  engine?: string;
+  /** 关联条目（写笔记用；null 禁用写笔记按钮） */
+  itemID: number | null;
+  /** 历史记录 id：历史条目直接定位；最新任务为 null（按 hash 查） */
+  historyID: number | null;
+}
+
+function taskToSummarySource(task: TranslateTaskInfo): SummarySource {
+  return {
+    translatedText: task.translatedText,
+    formattedText: task.formattedText,
+    engine: task.engine,
+    itemID: task.itemID ?? null,
+    historyID: null,
+  };
+}
+
+function historyToSummarySource(entry: HistoryEntry): SummarySource {
+  return {
+    translatedText: entry.translatedText,
+    formattedText: entry.formattedText ?? entry.sourceText,
+    engine: entry.engine,
+    itemID: entry.itemID ?? null,
+    historyID: entry.id,
+  };
+}
+
+/** 总结入口统一守卫：LLM 可用 → 启动总结并返回 true；不可用 → 提示配置（D2） */
+function startSummary(
+  ctx: SectionCtx,
+  source: SummarySource,
+  container?: HTMLElement,
+): boolean {
+  if (!summaryManager) return false;
+  if (!summaryManager.hasAvailableLLM()) {
+    promptLLMNeeded(ctx);
+    return false;
+  }
+  void runSummary(ctx, source, container);
+  return true;
+}
+
+/** 总结按钮点击入口 */
+function onSummarizeClick(ctx: SectionCtx, source: SummarySource): void {
+  startSummary(ctx, source);
+}
+
+/** 无可用 LLM 渠道：Zotero 原生提示 + 直达设置面板 */
+function promptLLMNeeded(ctx: SectionCtx): void {
+  const Prompt = (Zotero as any).Prompt;
+  if (!Prompt?.confirm) {
+    // 极端环境（无 Prompt API）：静默失败，不阻断 UI
+    return;
+  }
+  let win: Window | null = null;
+  try {
+    win = ctx.doc.defaultView as Window | null;
+  } catch {
+    win = null;
+  }
+  let index = -1;
+  try {
+    index = Prompt.confirm({
+      window: win,
+      title: getString("ztr-summarize"),
+      text: getString("ztr-summary-no-llm"),
+      button0: getString("ztr-open-settings"),
+      button1: getString("ztr-cancel"),
+      defaultButton: 1,
+    });
+  } catch {
+    index = -1;
+  }
+  if (index === 0) {
+    openPluginPreferences();
+  }
+}
+
+/** 进行中的总结流（按容器追踪；重新生成前取消旧流） */
+const runningTokens = new WeakMap<HTMLElement, CancelToken>();
+
+/**
+ * 总结流程（最新任务渲染到 #ztr-*-summary；历史条目渲染到内联容器）。
+ * @param container 内联容器（历史条目场景）；省略 = 最新任务容器
+ */
 async function runSummary(
   ctx: SectionCtx,
-  task: TranslateTaskInfo,
+  source: SummarySource,
+  container?: HTMLElement,
 ): Promise<void> {
-  const sbox = summaryBox(ctx);
+  const sbox = container ?? summaryBox(ctx);
   if (!sbox || !summaryManager) return;
   const doc = ctx.doc;
+  // 重新生成/重复点击：先取消进行中的流
+  runningTokens.get(sbox)?.cancel();
   const token = createCancelToken();
+  runningTokens.set(sbox, token);
 
   sbox.replaceChildren();
   const card = el(doc, "div");
@@ -619,12 +745,25 @@ async function runSummary(
 
   const actions = el(doc, "div");
   actions.className = "ztr-card-actions";
+  const hint = el(doc, "span");
+  hint.className = "ztr-muted";
+  hint.hidden = true;
+  const setHint = (msg: string) => {
+    hint.textContent = msg;
+    hint.hidden = false;
+  };
+  actions.append(hint);
+  // 流式期间提供"取消"（§7：取消/失败有状态）
+  const cancelBtn = actionButton(doc, getString("ztr-cancel"), () => {
+    token.cancel();
+  });
+  actions.append(cancelBtn);
   card.append(actions);
   sbox.append(card);
 
   try {
     const { text: result } = await summaryManager.summarize(
-      task.translatedText,
+      source.translatedText,
       (delta) => {
         text.textContent += delta;
       },
@@ -632,15 +771,34 @@ async function runSummary(
     );
     badge.textContent = getString("ztr-status-success");
     badge.className = "ztr-badge ztr-badge-success";
+    text.classList.remove("ztr-streaming");
+    cancelBtn.remove();
     actions.append(
+      // D5 操作区：复制 / 存入历史 / 写入笔记 / 重新生成
+      actionButton(doc, getString("ztr-copy-summary"), () => {
+        copyText(result);
+        setHint(getString("ztr-summary-copied"));
+      }),
       actionButton(doc, getString("ztr-save-summary"), () => {
-        void saveSummaryToHistory(task, result).then(() => {
-          actions.replaceChildren();
-          const saved = el(doc, "span");
-          saved.className = "ztr-muted";
-          saved.textContent = getString("ztr-summary-saved");
-          actions.append(saved);
+        void saveSummaryToHistory(source, result).then((ok) => {
+          setHint(
+            ok
+              ? getString("ztr-summary-saved")
+              : getString("ztr-summary-save-fail"),
+          );
         });
+      }),
+      noteActionButton(doc, source.itemID, getString("ztr-save-note"), () => {
+        void summaryManager!.saveNote(source.itemID, result).then((note) => {
+          setHint(
+            note
+              ? getString("ztr-note-saved")
+              : getString("ztr-note-save-fail"),
+          );
+        });
+      }),
+      actionButton(doc, getString("ztr-regenerate"), () => {
+        void runSummary(ctx, source, container);
       }),
     );
   } catch (e) {
@@ -656,16 +814,66 @@ async function runSummary(
   }
 }
 
-async function saveSummaryToHistory(
-  task: TranslateTaskInfo,
-  summary: string,
-): Promise<void> {
-  const { hashSource, queryCache } = await import("../modules/history");
-  const hash = hashSource(task.formattedText);
-  const entry = await queryCache(hash, prefs.targetLang, task.engine ?? "bing");
-  if (entry) {
-    await summaryManager!.saveSummary(entry.id, summary);
+/** 写笔记按钮：无关联条目（itemID 为 null）时禁用并提示（D8） */
+function noteActionButton(
+  doc: Document,
+  itemID: number | null,
+  label: string,
+  onClick: () => void,
+): HTMLButtonElement {
+  const btn = actionButton(doc, label, onClick);
+  if (itemID == null) {
+    btn.disabled = true;
+    btn.title = getString("ztr-no-note-item");
   }
+  return btn;
+}
+
+/**
+ * 保存总结到历史：
+ * - 历史条目场景：historyID 直接定位；
+ * - 最新任务场景：按 formattedText 哈希查历史条目再写入 summary 字段。
+ */
+async function saveSummaryToHistory(
+  source: SummarySource,
+  summary: string,
+): Promise<boolean> {
+  try {
+    if (!summaryManager) return false;
+    if (source.historyID != null) {
+      await summaryManager.saveSummary(source.historyID, summary);
+      return true;
+    }
+    const { hashSource, queryCache } = await import("../modules/history");
+    const hash = hashSource(source.formattedText);
+    const entry = await queryCache(
+      hash,
+      prefs.targetLang,
+      source.engine ?? "bing",
+    );
+    if (!entry) return false;
+    await summaryManager.saveSummary(entry.id, summary);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 快捷键桥（D6）：对最近成功任务触发总结，渲染到指定窗格。
+ * @returns 是否已处理（无任务/无窗格时返回 false，由调用方提示）
+ */
+export function summarizeTaskIn(
+  kind: "reader" | "item",
+  task: TranslateTaskInfo,
+): boolean {
+  if (!summaryManager) return false;
+  const ctx =
+    [...contexts.values()].find(
+      (c) => c.kind === kind && c.rendered && c.body.isConnected,
+    ) ?? [...contexts.values()].find((c) => c.rendered && c.body.isConnected);
+  if (!ctx) return false;
+  return startSummary(ctx, taskToSummarySource(task));
 }
 
 // ---------------------------------------------------------------------------

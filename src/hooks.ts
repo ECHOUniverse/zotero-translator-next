@@ -20,8 +20,8 @@ async function onStartup() {
   // 历史表（幂等）
   await ensureHistoryTable();
 
-  // 偏好面板（官方 API）
-  registerPreferencePane();
+  // 偏好面板（官方 API；await 以捕获 paneID，供"打开设置"直达）
+  await registerPreferencePane();
 
   // 区块（阅读器侧栏 + 条目面板）
   const { translate, summary, reader, itemPane } = addon.data;
