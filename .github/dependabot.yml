@@ -14,8 +14,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # 大版本迁移（如 typescript 7）需要人工评估，避免自动升级产生无谓的失败 PR
+    # 大版本迁移（如 typescript 7 / eslint 10）需要人工评估或等生态适配，
+    # 避免自动升级产生无谓的失败 PR
     ignore:
       - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "eslint"
         update-types:
           - "version-update:semver-major"
