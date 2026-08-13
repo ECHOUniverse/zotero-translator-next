@@ -36,9 +36,15 @@ import {
   type CancelToken,
 } from "../utils/cancel";
 import { openPluginPreferences } from "../modules/settings";
+import {
+  SelectionManager,
+  joinRegions,
+  type SelectionRegion,
+} from "../modules/selection";
 
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
+export const SELECTION_PANE_ID = "translator-selection";
 
 /** 侧栏历史区每篇文章显示条数上限 */
 const HISTORY_LIMIT = 20;
@@ -78,6 +84,10 @@ interface SectionCtx {
   refresh: (() => Promise<void>) | null;
   /** 订阅解绑 */
   unsubscribe: (() => void) | null;
+  /** 跨区域选区管理器（仅 selection 区块持有） */
+  selection: SelectionManager | null;
+  /** onInit/onItemChange 提供的启用开关（仅 selection 区块持有） */
+  setEnabled: ((enabled: boolean) => void) | null;
 }
 
 const contexts = new Map<string, SectionCtx>();
@@ -97,6 +107,7 @@ function getCtx(body: HTMLElement): SectionCtx | undefined {
 export function registerSections(
   translate: TranslateManager,
   summary: SummaryManager,
+  selection: SelectionManager,
 ): { readerPaneID: string; itemPaneID: string } {
   summaryManager = summary;
   const pluginID = "zotero-translator-next@echouniverse.io";
@@ -194,6 +205,61 @@ export function registerSections(
     },
   });
 
+  // 跨区域选区区块（仅 tabType='reader'；默认 setEnabled(false) 完全隐藏，
+  // 加入第一段时激活出现，清空后消失；不渲染空态）
+  Zotero.ItemPaneManager.registerSection({
+    paneID: SELECTION_PANE_ID,
+    pluginID,
+    header: {
+      l10nID: getLocaleID("ztr-section-selection-header"),
+      icon: "chrome://zotero-translator-next/content/icons/section-16.svg",
+    },
+    sidenav: {
+      l10nID: getLocaleID("ztr-section-selection-header"),
+      icon: "chrome://zotero-translator-next/content/icons/section-20.svg",
+    },
+    bodyXHTML: selectionBodyXHTML(),
+    onInit: ({ body, refresh, setEnabled }) => {
+      initCtx(translate, {
+        paneID: SELECTION_PANE_ID,
+        kind: "reader",
+        body: body as HTMLDivElement,
+        refresh,
+      });
+      const ctx = getCtx(body as HTMLDivElement);
+      if (!ctx) return;
+      ctx.selection = selection;
+      ctx.setEnabled = setEnabled;
+      // 默认完全隐藏（含标题栏，零 UI 占用）；加入第一段时由订阅激活
+      setEnabled(false);
+      // 选区变化 → 激活/隐藏 + 重绘列表
+      const selUnsub = selection.subscribe(() => {
+        onSelectionChanged(ctx);
+      });
+      const prevUnsub = ctx.unsubscribe;
+      ctx.unsubscribe = () => {
+        prevUnsub?.();
+        selUnsub();
+      };
+    },
+    onItemChange: ({ body, item, tabType, setEnabled }) => {
+      const ctx = getCtx(body as HTMLDivElement);
+      if (!ctx) return;
+      ctx.tabType = tabType;
+      ctx.itemID = item?.id ?? null;
+      ctx.setEnabled = setEnabled;
+      // 激活条件：当前文献有选区且处于阅读器 tab
+      updateSelectionSection(ctx);
+    },
+    onRender: ({ body, item }) => {
+      const ctx = getCtx(body as HTMLDivElement);
+      if (!ctx) return;
+      ctx.rendered = true;
+      ctx.itemID = item?.id ?? null;
+      renderSelectionList(ctx);
+    },
+  });
+
   return { readerPaneID: READER_PANE_ID, itemPaneID: ITEM_PANE_ID };
 }
 
@@ -217,6 +283,8 @@ function initCtx(
     rendered: false,
     refresh: init.refresh,
     unsubscribe: null,
+    selection: null,
+    setEnabled: null,
   };
   contexts.set(ctxKey(init.body), ctx);
   // 订阅任务状态变化：更新结果容器 + 成功时刷新历史列表（不触发区块级渲染）
@@ -260,6 +328,15 @@ function itemBodyXHTML(): string {
   <html:div class="ztr-summary" id="ztr-item-summary"></html:div>
   <html:div class="ztr-section-title-row" id="ztr-item-history-title"></html:div>
   <html:div class="ztr-history" id="ztr-item-history"></html:div>
+</html:div>`;
+}
+
+function selectionBodyXHTML(): string {
+  return `
+<html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
+<html:div class="ztr-section" id="ztr-selection-section">
+  <html:div class="ztr-selection-toolbar" id="ztr-selection-toolbar"></html:div>
+  <html:div class="ztr-selection-list" id="ztr-selection-list"></html:div>
 </html:div>`;
 }
 
@@ -617,6 +694,183 @@ function getSelectedItem(): Zotero.Item | null {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// 跨区域选区区块（多选拼段翻译）
+// ---------------------------------------------------------------------------
+
+/** 选区变化（add/remove/clear）→ 按当前文献激活/隐藏 + 重绘 */
+function onSelectionChanged(ctx: SectionCtx): void {
+  if (ctx.itemID == null) return;
+  updateSelectionSection(ctx);
+}
+
+/** 激活条件 + 重绘（onItemChange / 选区订阅共用）：
+ *  当前文献有选区且处于阅读器 tab → setEnabled(true) + 渲染列表；
+ *  否则 setEnabled(false)（整区块含标题栏完全隐藏）。 */
+function updateSelectionSection(ctx: SectionCtx): void {
+  const active =
+    ctx.itemID != null &&
+    ctx.selection?.has(ctx.itemID) === true &&
+    ctx.tabType === "reader";
+  ctx.setEnabled?.(active);
+  if (active) renderSelectionList(ctx);
+}
+
+/** 重绘选区列表 + 工具栏（幂等；无选区/无条目时清空） */
+function renderSelectionList(ctx: SectionCtx): void {
+  if (!ctx.rendered) return;
+  const listBox = ctx.body.querySelector<HTMLDivElement>("#ztr-selection-list");
+  if (!listBox) return;
+  const itemID = ctx.itemID;
+  const regions =
+    itemID != null && ctx.selection ? ctx.selection.get(itemID) : [];
+  if (regions.length === 0) {
+    listBox.replaceChildren();
+    return;
+  }
+  buildSelectionToolbar(ctx);
+
+  const doc = ctx.doc;
+  const showOrdinal = regions.length >= 2;
+  listBox.replaceChildren();
+  for (let i = 0; i < regions.length; i++) {
+    listBox.append(
+      selectionRow(
+        doc,
+        regions[i],
+        i + 1,
+        showOrdinal,
+        itemID!,
+        ctx.selection!,
+      ),
+    );
+  }
+}
+
+/** 区域行：序号 + 页码 + 文本预览（单行截断，title 全文）+ ×删除 */
+function selectionRow(
+  doc: Document,
+  region: SelectionRegion,
+  index: number,
+  showOrdinal: boolean,
+  itemID: number,
+  selection: SelectionManager,
+): HTMLDivElement {
+  const row = el(doc, "div");
+  row.className = "ztr-selection-item";
+  row.title = region.text;
+  // 行点击 → 阅读器跳页核对
+  row.addEventListener("click", () => navigateToPage(region.pageIndex));
+
+  if (showOrdinal) {
+    const seq = el(doc, "span");
+    seq.className = "ztr-selection-seq";
+    seq.textContent = ordinal(index);
+    row.append(seq);
+  }
+  const page = el(doc, "span");
+  page.className = "ztr-selection-page";
+  page.textContent = region.pageLabel;
+  row.append(page);
+  const preview = el(doc, "span");
+  preview.className = "ztr-selection-preview";
+  preview.textContent = region.text;
+  row.append(preview);
+  const del = el(doc, "button");
+  del.className = "ztr-icon-btn";
+  del.textContent = "×";
+  del.title = getString("ztr-selection-delete");
+  del.addEventListener("click", (e: Event) => {
+    e.stopPropagation();
+    selection.remove(itemID, region.key);
+  });
+  row.append(del);
+  return row;
+}
+
+/** 工具栏（幂等）：翻译全部 / 清空 */
+function buildSelectionToolbar(ctx: SectionCtx): void {
+  const toolbar = ctx.body.querySelector<HTMLDivElement>(
+    "#ztr-selection-toolbar",
+  );
+  if (!toolbar || toolbar.hasChildNodes()) return;
+  const doc = ctx.doc;
+
+  const translateAll = el(doc, "button");
+  translateAll.className = "ztr-btn";
+  translateAll.textContent = getString("ztr-selection-translate-all");
+  translateAll.addEventListener("click", () => {
+    const itemID = ctx.itemID;
+    if (itemID == null || !ctx.selection) return;
+    // 拼接合成完整段落，走现有管线（格式化→分块→渠道→历史）
+    const joined = joinRegions(ctx.selection.get(itemID));
+    if (!joined) return;
+    void translateManager
+      ?.translate({
+        sourceText: joined,
+        itemID,
+        channelId: getSelectedChannelId(),
+      })
+      .catch((e) => ztoolkit.log(`[selection] translate error: ${e.message}`));
+  });
+  toolbar.append(translateAll);
+
+  const clear = el(doc, "button");
+  clear.className = "ztr-btn";
+  clear.textContent = getString("ztr-selection-clear");
+  clear.addEventListener("click", () => {
+    const itemID = ctx.itemID;
+    if (itemID == null || !ctx.selection) return;
+    const win = ctx.doc.defaultView as Window | null;
+    if (win && !win.confirm(getString("ztr-selection-clear-confirm"))) return;
+    ctx.selection.clear(itemID);
+  });
+  toolbar.append(clear);
+}
+
+/**
+ * 阅读器跳页（行点击核对）。
+ * 不复用 ReaderModule.getCurrentReader()：reader.ts → sections.ts 已有依赖
+ * （getSelectedChannelId），反向引用会形成循环依赖；此处内联等价查询。
+ */
+function navigateToPage(pageIndex: number): void {
+  try {
+    const win = Zotero.getMainWindows()[0] as any;
+    const tabID = win?.Zotero_Tabs?.selectedID;
+    const reader = tabID ? Zotero.Reader.getByTabID(tabID) : null;
+    (reader as any)?.navigate?.({ pageIndex });
+  } catch (e) {
+    ztoolkit.log(`[selection] navigate error: ${(e as Error).message}`);
+  }
+}
+
+/** 文档顺序序号（1-20 用圈号；超限回落数字） */
+function ordinal(n: number): string {
+  const CIRCLED = [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪",
+    "⑫",
+    "⑬",
+    "⑭",
+    "⑮",
+    "⑯",
+    "⑰",
+    "⑱",
+    "⑲",
+    "⑳",
+  ];
+  return n >= 1 && n <= CIRCLED.length ? CIRCLED[n - 1] : String(n);
 }
 
 // ---------------------------------------------------------------------------

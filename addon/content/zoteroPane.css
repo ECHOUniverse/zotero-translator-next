@@ -289,6 +289,72 @@
   text-align: center;
 }
 
+/* 跨区域选区区块（多选拼段翻译） */
+.ztr-selection-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ztr-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ztr-selection-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border50, #eee);
+  border-radius: 6px;
+  background: var(--fill-quinary, #fafafa);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.ztr-selection-item:hover {
+  background: var(--fill-tertiary, #f0f0f0);
+}
+
+.ztr-selection-seq {
+  flex: 0 0 auto;
+  color: var(--accent-blue, #4072e5);
+  font-size: 11px;
+  user-select: none;
+}
+
+.ztr-selection-page {
+  flex: 0 0 auto;
+  color: var(--fill-secondary, #888);
+  font-size: 11px;
+  user-select: none;
+}
+
+/* 文本预览：单行截断，全文在 title */
+.ztr-selection-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+}
+
+.ztr-selection-item .ztr-icon-btn {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: var(--fill-secondary, #888);
+}
+
+.ztr-selection-item .ztr-icon-btn:hover {
+  color: var(--accent-red, #db2c3a);
+}
+
 /* 偏好面板辅助 */
 .ztr-prefs-list {
   display: flex;

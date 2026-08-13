@@ -10,6 +10,7 @@ import { prefs } from "../prefs";
 import { getString } from "../utils/locale";
 import type { TranslateManager, TranslateTaskInfo } from "./tasks";
 import type { SummaryManager } from "./summary";
+import type { SelectionManager, SelectionAddResult } from "./selection";
 import { getSelectedChannelId, getLastSuccessTask } from "../ui/sections";
 
 export interface ReaderOptions {
@@ -18,6 +19,8 @@ export interface ReaderOptions {
    * 避免 ReaderModule 反向依赖 UI 区块上下文）。
    */
   onSummarize?: (task: TranslateTaskInfo, kind: "reader" | "item") => void;
+  /** 跨区域选区管理器（弹层「加入选区」按钮写入） */
+  selection?: SelectionManager;
 }
 
 export class ReaderModule {
@@ -27,6 +30,7 @@ export class ReaderModule {
     task: TranslateTaskInfo,
     kind: "reader" | "item",
   ) => void;
+  private selection?: SelectionManager;
   private lastSelectionText = "";
   private lastSelectionTime = 0;
   private autoDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,6 +43,7 @@ export class ReaderModule {
     this.translate = translate;
     this.summary = summary;
     this.onSummarize = options.onSummarize;
+    this.selection = options.selection;
   }
 
   /** 注册划选弹层按钮（startup 调用；插件卸载自动注销） */
@@ -62,12 +67,10 @@ export class ReaderModule {
         container.style.margin = "2px 0";
         append(container);
 
-        const btn = doc.createElement("button");
-        btn.textContent = getString("ztr-translate-selection");
-        btn.style.cssText =
-          "padding:2px 8px;border-radius:4px;cursor:pointer;" +
-          "font-size:12px;background:var(--fill-quinary,#eee);" +
-          "border:1px solid var(--color-border,#ccc);color:var(--fill-primary,#333)";
+        const btn = selectionPopupButton(
+          doc,
+          getString("ztr-translate-selection"),
+        );
         btn.addEventListener("click", () => {
           void this.translate
             .translate({
@@ -80,6 +83,39 @@ export class ReaderModule {
             });
         });
         container.append(btn);
+
+        // 「加入选区」（跨区域拼段翻译入口）：
+        // 点击取消挂起的划选即译；加入后弹层保持，可继续划下一段。
+        if (this.selection && itemID != null) {
+          const addBtn = selectionPopupButton(
+            doc,
+            getString("ztr-add-to-selection"),
+          );
+          addBtn.addEventListener("click", () => {
+            // 1. 取消划选即译定时器（不触发自动翻译）
+            if (this.autoDebounceTimer) {
+              clearTimeout(this.autoDebounceTimer);
+              this.autoDebounceTimer = null;
+            }
+            // 2. annotation 字段统一兜底（官方实现细节，未来版本可能变动）
+            const annotation = params.annotation as any;
+            const pageIndex = annotation?.position?.pageIndex ?? 0;
+            // sortIndex 缺失 → undefined，由 manager 按添加顺序兜底（规格 §6.2）
+            const sortIndex = Number(annotation?.sortIndex);
+            const result = this.selection!.add(itemID, {
+              pageIndex,
+              sortIndex: Number.isFinite(sortIndex) ? sortIndex : undefined,
+              pageLabel: annotation?.pageLabel ?? `p. ${pageIndex + 1}`,
+              text,
+            });
+            // 3. 按钮反馈（800ms 后恢复）
+            addBtn.textContent = selectionFeedback(result);
+            setTimeout(() => {
+              addBtn.textContent = getString("ztr-add-to-selection");
+            }, 800);
+          });
+          container.append(addBtn);
+        }
 
         // 划选即译（默认关）
         if (prefs.autoOnSelect) {
@@ -173,7 +209,8 @@ export class ReaderModule {
     return "item";
   }
 
-  private getCurrentReader(): _ZoteroTypes.ReaderInstance | undefined {
+  /** 当前阅读器实例（弹层/区块跳页复用；无阅读器 tab 时 undefined） */
+  getCurrentReader(): _ZoteroTypes.ReaderInstance | undefined {
     try {
       const win = Zotero.getMainWindows()[0] as any;
       const tabID = win?.Zotero_Tabs?.selectedID;
@@ -191,6 +228,29 @@ function isEditableTarget(target: HTMLElement): boolean {
   // XUL textbox 等
   if (target.closest?.("textbox, [contenteditable='true']")) return true;
   return false;
+}
+
+/** 弹层按钮（与「翻译」按钮同款样式） */
+function selectionPopupButton(doc: Document, label: string): HTMLButtonElement {
+  const b = doc.createElement("button");
+  b.textContent = label;
+  b.style.cssText =
+    "padding:2px 8px;border-radius:4px;cursor:pointer;" +
+    "font-size:12px;background:var(--fill-quinary,#eee);" +
+    "border:1px solid var(--color-border,#ccc);color:var(--fill-primary,#333)";
+  return b;
+}
+
+/** 「加入选区」结果反馈文案（added/dup/limit） */
+function selectionFeedback(result: SelectionAddResult): string {
+  if (result.added) {
+    return getString("ztr-added-to-selection", {
+      args: { count: result.count },
+    });
+  }
+  return result.reason === "dup"
+    ? getString("ztr-already-in-selection")
+    : getString("ztr-selection-limit");
 }
 
 /**
