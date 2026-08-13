@@ -160,9 +160,14 @@ describe("startup", function () {
   it("MyMemory 渠道真实翻译（网络）", async function () {
     this.timeout(60000);
     const instance: any = Zotero[config.addonInstance];
+    // 关联当前选中条目（新语义：历史按条目隔离，翻译需带 itemID 才会出现在该条目历史区）
+    const win = Zotero.getMainWindows()[0];
+    const selected =
+      (win?.ZoteroPane?.getSelectedItems?.()?.[0] as any) ?? null;
     const task = await instance.data.translate.translate({
       sourceText: "Hello world, this is a translation pipeline test.",
       channelId: "mymemory",
+      itemID: selected?.id ?? null,
     });
     // 等待队列完成（最长 30s）
     const deadline = Date.now() + 30000;
@@ -195,23 +200,28 @@ describe("startup", function () {
       );
     }
 
-    // UI 验证：区块历史容器应自动刷新出记录（subscribe 回调）
-    const win2 = Zotero.getMainWindows()[0];
-    const section2 = win2?.document.querySelector(
+    // UI 验证：关联了当前选中条目时，区块历史容器应自动刷新出记录（subscribe 回调）
+    const section2 = win?.document.querySelector(
       'item-pane-custom-section[data-pane$="-translator-item"]',
     );
     if (section2) {
-      const deadline2 = Date.now() + 5000;
-      let historyCount = 0;
-      while (Date.now() < deadline2) {
-        historyCount = section2.querySelectorAll(".ztr-history-item").length;
-        if (historyCount > 0) break;
-        await new Promise((r) => setTimeout(r, 300));
+      if (selected) {
+        const deadline2 = Date.now() + 5000;
+        let historyCount = 0;
+        while (Date.now() < deadline2) {
+          historyCount = section2.querySelectorAll(".ztr-history-item").length;
+          if (historyCount > 0) break;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        assert.ok(
+          historyCount > 0,
+          "翻译成功后历史容器应自动出现记录（subscribe 刷新）",
+        );
+      } else {
+        // 无当前选中条目：新语义下历史区显示空态（itemID 为 null 的记录不进入任何条目历史区）
+        const empty = section2.querySelector(".ztr-empty");
+        assert.ok(empty, "无当前条目时历史区应显示空态");
       }
-      assert.ok(
-        historyCount > 0,
-        "翻译成功后历史容器应自动出现记录（subscribe 刷新）",
-      );
     }
   });
 });
