@@ -127,7 +127,7 @@ export async function queryCache(
   return row ? (row as HistoryEntry) : null;
 }
 
-/** 按条目查询历史（最新在前）；itemID 为 null 时返回全局最近历史 */
+/** 按条目查询历史（最新在前）；itemID 为 null 时返回全局最近历史（仅历史兼容语义，UI 不再使用） */
 export async function getHistoryByItem(
   itemID: number | null,
   limit = 50,
@@ -149,6 +149,17 @@ export async function getHistoryByItem(
   return (rows ?? []) as HistoryEntry[];
 }
 
+/** 孤儿记录（未关联条目的翻译，itemID IS NULL；最新在前） */
+export async function getOrphanHistory(limit = 50): Promise<HistoryEntry[]> {
+  const rows = await Zotero.DB.queryAsync(
+    `SELECT * FROM ${TABLE}
+     WHERE itemID IS NULL
+     ORDER BY createdAt DESC LIMIT ?`,
+    [limit],
+  );
+  return (rows ?? []) as HistoryEntry[];
+}
+
 /** 全局历史（最新在前，分页） */
 export async function getHistory(
   offset = 0,
@@ -160,6 +171,31 @@ export async function getHistory(
     [limit, offset],
   );
   return (rows ?? []) as HistoryEntry[];
+}
+
+/** 有历史的条目分组（最新翻译在前；含 itemID 为 NULL 的孤儿记录组） */
+export interface HistoryItemGroup {
+  itemID: number | null;
+  count: number;
+  lastCreatedAt: number;
+}
+
+export async function getHistoryItemGroups(
+  limit = 100,
+): Promise<HistoryItemGroup[]> {
+  const rows = await Zotero.DB.queryAsync(
+    `SELECT itemID, COUNT(*) AS count, MAX(createdAt) AS lastCreatedAt
+     FROM ${TABLE}
+     GROUP BY itemID
+     ORDER BY lastCreatedAt DESC
+     LIMIT ?`,
+    [limit],
+  );
+  return (rows ?? []).map((r: any) => ({
+    itemID: r.itemID == null ? null : Number(r.itemID),
+    count: Number(r.count),
+    lastCreatedAt: Number(r.lastCreatedAt),
+  }));
 }
 
 /** 历史总数 */

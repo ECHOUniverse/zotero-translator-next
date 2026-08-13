@@ -8,6 +8,18 @@ ztr-target-lang-label = 目标语言
 # 空态
 ztr-empty-result = 在 PDF 中划选文本，或在阅读器中点击“翻译选中内容”
 ztr-empty-history = 暂无翻译历史
+ztr-no-item-selected = 未选择条目
+
+# 分区标题
+ztr-section-current = 当前翻译
+ztr-section-history = 翻译历史
+ztr-badge-current = 当前
+ztr-clear-item-history = 清空本条历史
+ztr-clear-item-history-confirm = 确定清空该条目的全部翻译历史？
+ztr-view-all-history = 查看全部历史
+ztr-history-window-title = 翻译历史
+ztr-unattached = 未关联条目
+ztr-deleted-item = （已删除）
 
 # 状态
 ztr-status-waiting = 排队中

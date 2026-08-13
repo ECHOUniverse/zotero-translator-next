@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>ZoteroTranslatorNext — History</title>
+    <link
+      rel="stylesheet"
+      href="chrome://zotero-translator-next/content/zoteroPane.css"
+    />
+  </head>
+  <body class="ztr-history-window">
+    <!-- 顶部：标题 + 清空本条 + 文章 tab 条 -->
+    <div id="ztr-window-head">
+      <div class="ztr-section-title-row ztr-window-titlebar">
+        <span class="ztr-section-title-text" id="ztr-window-title"></span>
+        <span class="ztr-history-tools">
+          <button
+            type="button"
+            class="ztr-icon-btn"
+            id="ztr-window-clear"
+            title=""
+          ></button>
+        </span>
+      </div>
+      <div id="ztr-window-tabs"></div>
+    </div>
+    <!-- 内容区：当前 tab 的全量历史 -->
+    <div id="ztr-window-content"></div>
+    <!-- 窗口脚本（独立 bundle） -->
+    <script src="chrome://zotero-translator-next/content/scripts/ztr-history.js"></script>
+  </body>
+</html>

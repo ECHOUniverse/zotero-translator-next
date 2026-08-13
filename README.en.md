@@ -14,7 +14,7 @@
 - **Rule-based formatting pipeline**: automatic line-break merging, hyphenation repair, quote/dash/full-width/symbol normalization (each toggleable; deterministic and free)
 - **Multi-channel with automatic fallback**: MyMemory (free, no key) → DeepSeek → Bing (Azure) → custom OpenAI-compatible channels; failures fall back in configured order, with exponential backoff on 429 rate limits
 - **Streaming experience**: token-by-token streaming for AI channels; translation queue with cancel; auto-translate on selection (off by default, debounce adjustable); context-aware prompts for LLM channels
-- **Translation history**: persisted in the Zotero database; global history view (with source item labels) + per-item deletion + clear all; identical text automatically hits the cache (toggleable)
+- **Translation history**: persisted in the Zotero database; **the sidebar shows only the current item's history** (clearly separated from the current translation by section titles, with a “current” badge on the record matching the active task) + per-record deletion / clear item history; a **“View all history” window** browses all records per item via tabs; identical text automatically hits the cache (toggleable)
 - **AI summaries**: stream a summary of the translation (reuses your AI channel; model/prompt independently configurable) and optionally save it to history
 - **Three-pane comparison**: original / formatted / translated (collapsible)
 - **Shortcuts**: `Cmd/Ctrl+Shift+T` to translate, `Cmd/Ctrl+Shift+S` to summarize (customizable, can be disabled)

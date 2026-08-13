@@ -224,6 +224,28 @@ reader.unsetAnnotations(keys);
 
 **建议优先级**：能用 `Zotero.Reader.registerEventListener` 就用官方 API；缺失的场景在 zotero-dev 发帖请求官方支持，比 monkey-patch 更可靠。
 
+### 4.5 区块正文文本选取（源码核查结论，2026-08-13）
+
+**问题**：自定义区块（`ItemPaneManager.registerSection` 的 `body`）内的 HTML 文本是否默认可被鼠标选中？
+
+**核查结论：可以。Zotero 7 官方 CSS/事件不阻止区块正文选取。**
+
+证据（`zotero/zotero` 主分支源码逐文件核对）：
+
+| 文件                                                                                             | user-select 规则                              | 交互事件绑定                                                                                            |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `chrome/content/zotero/elements/itemPaneCustomSection.js`                                        | 无（body 即 `<html:div data-type="body">`）   | 全部绑定在区块头部，不碰 body                                                                           |
+| `chrome/content/zotero/elements/collapsibleSection.js`                                           | 无                                            | `mousedown` `preventDefault` 只挂在 `.head`（防止点击头时抢焦点），`click`/`keydown`/`contextmenu` 同理 |
+| `_itemPaneCustomSection.scss`、`_collapsibleSection.scss`、`_itemPane.scss`、`_contextPane.scss` | 全文无 `user-select`                          | —                                                                                                       |
+| 全局 chrome CSS（`global-shared.css` / `widgets.css` / `overlay.css`）                           | 仅 sync-error 面板有 `-moz-user-select: text` | —                                                                                                       |
+
+推论：
+
+- 插件区块正文无需 hack 即可选中复制；如要显式保证（防 Zotero 未来 CSS 改动），在内容区加 `user-select: text` 即可（本项目 Q18）。
+- 用户“选不了”的常见体感来源：**流式渲染中文本被逐块替换、选区被冲掉**；或从不可选区域（按钮/徽标）开始拖选。
+- 头部 `mousedown` 的 `preventDefault` 不影响正文：自定义区块把交互事件全部收敛在 `.head`，是 Zotero 刻意设计（头部可点击折叠、可聚焦、有右键菜单），正文是纯内容区。
+- 阅读器独立窗口（`reader.xhtml`）不含 item pane；区块统一渲染在主窗口 `zoteroPane.xhtml` 的 `<item-pane>` 中，library 与 reader tabType 共用同一 DOM，故选取行为两处一致。
+
 ---
 
 ## 五、开发环境与工具链

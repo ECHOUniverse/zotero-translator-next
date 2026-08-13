@@ -41,6 +41,30 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
+/* 分区标题行（「当前翻译」/「翻译历史」） */
+.ztr-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 0 2px;
+  margin-top: 4px;
+  border-bottom: 1px solid var(--color-border50, #eee);
+}
+
+.ztr-section-title-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fill-secondary, #888);
+  user-select: none;
+}
+
+/* 「当前」徽标（历史中与当前任务匹配的记录） */
+.ztr-badge-current {
+  background: var(--accent-blue, #4072e5);
+  color: #fff;
+}
+
 .ztr-card-status {
   display: flex;
   gap: 6px;
@@ -103,6 +127,15 @@
   line-height: 1.5;
   max-height: 320px;
   overflow-y: auto;
+}
+
+/* 所有内容区可手动选取文本（显式声明，防 Zotero 未来 CSS 改动） */
+.ztr-result-text,
+.ztr-compare-text,
+.ztr-history-preview {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
 }
 
 .ztr-streaming::after {
@@ -282,6 +315,10 @@
   .ztr-section {
     color: #eee;
   }
+  body.ztr-history-window {
+    color: #eee;
+    background: #232327;
+  }
 }
 
 /* 历史条目标注 */
@@ -293,4 +330,90 @@
   text-overflow: ellipsis;
   max-width: 100%;
   margin-top: 1px;
+}
+
+/* ============ 全部历史浏览窗口（history.xhtml） ============ */
+
+body.ztr-history-window {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--fill-primary, #333);
+  background: var(--fill-quinary, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+#ztr-window-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ztr-window-titlebar {
+  margin-top: 0;
+}
+
+/* tab 条：横向滚动 */
+#ztr-window-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-border50, #eee);
+}
+
+.ztr-window-tab {
+  flex: 0 0 auto;
+  max-width: 200px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, #ccc);
+  background: var(--fill-quarternary, #fff);
+  color: var(--fill-primary, #333);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.ztr-window-tab:hover {
+  background: var(--fill-tertiary, #f0f0f0);
+}
+
+.ztr-window-tab.active {
+  background: var(--accent-blue, #4072e5);
+  border-color: var(--accent-blue, #4072e5);
+  color: #fff;
+}
+
+#ztr-window-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ztr-window-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.ztr-window-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fill-primary, #333);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

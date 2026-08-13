@@ -36,6 +36,13 @@ export default defineConfig({
         target: "firefox115",
         outfile: `.scaffold/build/addon/content/scripts/${pkg.config.addonRef}.js`,
       },
+      {
+        // 历史浏览窗口脚本（addon/content/history.xhtml 引用）
+        entryPoints: ["src/windows/historyWindow.ts"],
+        bundle: true,
+        target: "firefox115",
+        outfile: `.scaffold/build/addon/content/scripts/ztr-history.js`,
+      },
     ],
   },
 

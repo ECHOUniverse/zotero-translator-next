@@ -8,6 +8,18 @@ ztr-target-lang-label = Target language
 # Empty states
 ztr-empty-result = Select text in a PDF, or click “Translate selection” in the reader
 ztr-empty-history = No translation history
+ztr-no-item-selected = No item selected
+
+# Section titles
+ztr-section-current = Current translation
+ztr-section-history = Translation history
+ztr-badge-current = current
+ztr-clear-item-history = Clear item history
+ztr-clear-item-history-confirm = Clear all translation history for this item?
+ztr-view-all-history = View all history
+ztr-history-window-title = Translation History
+ztr-unattached = Unattached
+ztr-deleted-item = (deleted)
 
 # Status
 ztr-status-waiting = Queued

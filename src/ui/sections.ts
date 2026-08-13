@@ -20,7 +20,12 @@
 
 import { getString, getLocaleID } from "../utils/locale";
 import type { TranslateManager, TranslateTaskInfo } from "../modules/tasks";
-import { getHistoryByItem, deleteHistory } from "../modules/history";
+import {
+  getHistoryByItem,
+  deleteHistory,
+  deleteHistoryByItem,
+  hashSource,
+} from "../modules/history";
 import type { HistoryEntry } from "../modules/history";
 import { prefs } from "../prefs";
 import { channelRegistry } from "../services";
@@ -34,6 +39,9 @@ import { openPluginPreferences } from "../modules/settings";
 
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
+
+/** 侧栏历史区每篇文章显示条数上限 */
+const HISTORY_LIMIT = 20;
 
 /** XUL 文档中创建 HTML 元素必须显式指定 HTML 命名空间（createElement 默认 XUL） */
 const HTML_NS = "http://www.w3.org/1999/xhtml";
@@ -234,8 +242,10 @@ function readerBodyXHTML(): string {
 <html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
 <html:div class="ztr-section" id="ztr-reader-section">
   <html:div class="ztr-toolbar" id="ztr-reader-toolbar"></html:div>
+  <html:div class="ztr-section-title-row" id="ztr-reader-current-title"></html:div>
   <html:div class="ztr-result" id="ztr-reader-result"></html:div>
   <html:div class="ztr-summary" id="ztr-reader-summary"></html:div>
+  <html:div class="ztr-section-title-row" id="ztr-reader-history-title"></html:div>
   <html:div class="ztr-history" id="ztr-reader-history"></html:div>
 </html:div>`;
 }
@@ -245,8 +255,10 @@ function itemBodyXHTML(): string {
 <html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
 <html:div class="ztr-section" id="ztr-item-section">
   <html:div class="ztr-toolbar" id="ztr-item-toolbar"></html:div>
+  <html:div class="ztr-section-title-row" id="ztr-item-current-title"></html:div>
   <html:div class="ztr-result" id="ztr-item-result"></html:div>
   <html:div class="ztr-summary" id="ztr-item-summary"></html:div>
+  <html:div class="ztr-section-title-row" id="ztr-item-history-title"></html:div>
   <html:div class="ztr-history" id="ztr-item-history"></html:div>
 </html:div>`;
 }
@@ -254,6 +266,22 @@ function itemBodyXHTML(): string {
 function sectionRoot(ctx: SectionCtx): HTMLDivElement | null {
   return ctx.body.querySelector<HTMLDivElement>(
     ctx.kind === "reader" ? "#ztr-reader-section" : "#ztr-item-section",
+  );
+}
+
+function currentTitleBox(ctx: SectionCtx): HTMLDivElement | null {
+  return ctx.body.querySelector<HTMLDivElement>(
+    ctx.kind === "reader"
+      ? "#ztr-reader-current-title"
+      : "#ztr-item-current-title",
+  );
+}
+
+function historyTitleBox(ctx: SectionCtx): HTMLDivElement | null {
+  return ctx.body.querySelector<HTMLDivElement>(
+    ctx.kind === "reader"
+      ? "#ztr-reader-history-title"
+      : "#ztr-item-history-title",
   );
 }
 
@@ -289,8 +317,10 @@ function renderSection(translate: TranslateManager, ctx: SectionCtx): void {
 
   // 工具栏（幂等：只建一次）
   buildToolbar(doc, root, ctx);
+  // 分区标题（幂等）
+  buildSectionTitles(doc, root, ctx);
 
-  // 结果卡片：最近任务
+  // 结果卡片：最近任务（按条目隔离，见 renderResultCard）
   const task = getLatestTask(translate);
   const box = resultBox(ctx);
   if (box && !box.hasChildNodes()) {
@@ -302,11 +332,90 @@ function renderSection(translate: TranslateManager, ctx: SectionCtx): void {
   }
 }
 
+/**
+ * 分区标题（幂等）：
+ * - 「当前翻译」：结果卡片/总结区上方
+ * - 「翻译历史」：历史列表上方，右侧带「清空本条」「查看全部历史」按钮
+ */
+function buildSectionTitles(
+  doc: Document,
+  root: HTMLDivElement,
+  ctx: SectionCtx,
+): void {
+  const curBox = currentTitleBox(ctx);
+  if (curBox && !curBox.hasChildNodes()) {
+    const label = el(doc, "span");
+    label.className = "ztr-section-title-text";
+    label.textContent = getString("ztr-section-current");
+    curBox.append(label);
+  }
+
+  const histBox = historyTitleBox(ctx);
+  if (!histBox || histBox.hasChildNodes()) return;
+  const label = el(doc, "span");
+  label.className = "ztr-section-title-text";
+  label.textContent = getString("ztr-section-history");
+  histBox.append(label);
+
+  const tools = el(doc, "span");
+  tools.className = "ztr-history-tools";
+  // 清空本条历史
+  const clearBtn = el(doc, "button");
+  clearBtn.className = "ztr-icon-btn";
+  clearBtn.textContent = "🗑";
+  clearBtn.title = getString("ztr-clear-item-history");
+  clearBtn.disabled = ctx.itemID == null;
+  clearBtn.addEventListener("click", () => {
+    if (ctx.itemID == null) return;
+    const win = ctx.doc.defaultView as Window | null;
+    if (win && !win.confirm(getString("ztr-clear-item-history-confirm")))
+      return;
+    void deleteHistoryByItem(ctx.itemID).then(() => refreshHistoryFor(ctx));
+  });
+  tools.append(clearBtn);
+  // 查看全部历史（独立窗口）
+  const allBtn = el(doc, "button");
+  allBtn.className = "ztr-icon-btn";
+  allBtn.textContent = "📚";
+  allBtn.title = getString("ztr-view-all-history");
+  allBtn.addEventListener("click", () => {
+    openHistoryWindow(ctx.itemID);
+  });
+  tools.append(allBtn);
+  histBox.append(tools);
+}
+
+/** 打开全部历史浏览窗口（chrome 独立窗口，由窗口内脚本自行渲染） */
+function openHistoryWindow(initialItemID: number | null): void {
+  try {
+    const mainWin = Zotero.getMainWindows()[0] as any;
+    mainWin?.openDialog(
+      "chrome://zotero-translator-next/content/history.xhtml",
+      "ztr-history",
+      "chrome,titlebar,centerscreen,resizable=yes",
+      { initialItemID },
+    );
+  } catch (e) {
+    ztoolkit.log(`openHistoryWindow failed: ${(e as Error).message}`);
+  }
+}
+
 /** 任务更新回调：重绘结果卡片（保持容器内其他内容不动） */
 function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   const box = resultBox(ctx);
   if (!box) return;
   const doc = ctx.doc;
+
+  // 结果卡片按条目隔离：任务属于其他条目时显示空态，不串台（D10）
+  if (
+    task &&
+    ctx.itemID != null &&
+    task.itemID != null &&
+    task.itemID !== ctx.itemID
+  ) {
+    box.replaceChildren(emptyState(doc, getString("ztr-empty-result")));
+    return;
+  }
 
   if (!task) {
     box.replaceChildren(emptyState(doc, getString("ztr-empty-result")));
@@ -514,24 +623,71 @@ function getSelectedItem(): Zotero.Item | null {
 // 历史列表（onAsyncRender / 条目变化时异步刷新）
 // ---------------------------------------------------------------------------
 
+/** 当前条目下已成功结束的任务（结果卡片展示的那个；供「当前」徽标精确匹配） */
+function currentSuccessTaskFor(ctx: SectionCtx): TranslateTaskInfo | null {
+  const current = translateManager?.getCurrent();
+  if (
+    current &&
+    current.status === "success" &&
+    ctx.itemID != null &&
+    current.itemID === ctx.itemID
+  ) {
+    return current;
+  }
+  if (
+    lastSuccessTask &&
+    lastSuccessTask.status === "success" &&
+    ctx.itemID != null &&
+    lastSuccessTask.itemID === ctx.itemID
+  ) {
+    return lastSuccessTask;
+  }
+  return null;
+}
+
 async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
   const box = historyBox(ctx);
   if (!box) return;
   const doc = ctx.doc;
-  // 全局最近历史（任何来源的翻译都可查；条目信息在条目上标注）
-  const entries = await getHistoryByItem(null, 20);
+
+  // 无当前条目：显式空态，绝不回退到全局历史（itemID=null 曾是全局查询的漏洞）
+  if (ctx.itemID == null) {
+    box.replaceChildren(emptyState(doc, getString("ztr-no-item-selected")));
+    return;
+  }
+
+  // 只显示当前文章历史（最新在前，上限 HISTORY_LIMIT）
+  const entries = await getHistoryByItem(ctx.itemID, HISTORY_LIMIT);
   box.replaceChildren();
   if (entries.length === 0) {
     box.append(emptyState(doc, getString("ztr-empty-history")));
     return;
   }
+
+  // 「当前」徽标：与结果卡片当前成功任务精确匹配的落库记录（sourceHash+engine+targetLang）
+  const task = currentSuccessTaskFor(ctx);
+  const currentHash =
+    task && task.formattedText ? hashSource(task.formattedText) : null;
+  const currentEngine = task?.engine ?? null;
+  const targetLang = prefs.targetLang;
+  let marked = false;
+
   const list = el(doc, "div");
   list.className = "ztr-history-list";
   // 展开按钮可见性依赖布局，须在全部节点挂载后统一测量
   const measurable: { preview: HTMLDivElement; toggle: HTMLButtonElement }[] =
     [];
   for (const entry of entries) {
+    const isCurrent =
+      !marked &&
+      currentHash != null &&
+      currentEngine != null &&
+      entry.sourceHash === currentHash &&
+      entry.targetLang === targetLang &&
+      entry.engine === currentEngine;
+    if (isCurrent) marked = true;
     const { row, container, preview, toggle } = historyItem(doc, entry, {
+      isCurrent,
       onDelete: () => {
         void deleteHistory(entry.id).then(() => refreshHistoryFor(ctx));
       },
@@ -555,7 +711,11 @@ async function refreshHistoryFor(ctx: SectionCtx): Promise<void> {
 function historyItem(
   doc: Document,
   entry: HistoryEntry,
-  handlers: { onDelete: () => void; onSummarize: () => void },
+  handlers: {
+    isCurrent?: boolean;
+    onDelete: () => void;
+    onSummarize: () => void;
+  },
 ): {
   row: HTMLDivElement;
   container: HTMLDivElement;
@@ -570,6 +730,13 @@ function historyItem(
   time.className = "ztr-muted";
   time.textContent = formatTime(entry.createdAt);
   head.append(time);
+  // 「当前」徽标：与结果卡片当前任务匹配的这条记录
+  if (handlers.isCurrent) {
+    const cur = el(doc, "span");
+    cur.className = "ztr-badge ztr-badge-current";
+    cur.textContent = getString("ztr-badge-current");
+    head.append(cur);
+  }
   const engine = el(doc, "span");
   engine.className = "ztr-badge ztr-badge-channel";
   engine.textContent = channelRegistry.get(entry.engine)?.name ?? entry.engine;
@@ -597,7 +764,7 @@ function historyItem(
   head.append(tools);
   row.append(head);
 
-  // 来源条目标注（全局历史时区分来源）
+  // 来源条目标注（全局历史时区分来源；按条目后仅孤儿/跨条目场景可见）
   if (entry.itemID != null) {
     const itemTitle = getItemTitle(entry.itemID);
     if (itemTitle) {
