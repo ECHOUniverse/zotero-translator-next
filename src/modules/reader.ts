@@ -52,6 +52,7 @@ export class ReaderModule {
         if (!text) return;
         this.lastSelectionText = text;
         this.lastSelectionTime = Date.now();
+        const itemID = logicalItemID(reader.itemID);
 
         // 按钮容器（append 必须同步调用）
         const container = doc.createElement("div");
@@ -71,7 +72,7 @@ export class ReaderModule {
           void this.translate
             .translate({
               sourceText: text,
-              itemID: reader.itemID ?? null,
+              itemID,
               channelId: getSelectedChannelId(),
             })
             .catch((e) => {
@@ -87,7 +88,7 @@ export class ReaderModule {
             void this.translate
               .translate({
                 sourceText: text,
-                itemID: reader.itemID ?? null,
+                itemID,
                 channelId: getSelectedChannelId(),
               })
               .catch((e) => ztoolkit.log(e.message));
@@ -130,7 +131,7 @@ export class ReaderModule {
     await this.translate
       .translate({
         sourceText: text,
-        itemID: reader?.itemID ?? null,
+        itemID: reader ? logicalItemID(reader.itemID) : null,
         channelId: getSelectedChannelId(),
       })
       .catch((e) => ztoolkit.log(e.message));
@@ -190,6 +191,26 @@ function isEditableTarget(target: HTMLElement): boolean {
   // XUL textbox 等
   if (target.closest?.("textbox, [contenteditable='true']")) return true;
   return false;
+}
+
+/**
+ * 附件 → 父条目（逻辑条目）id。
+ *
+ * 阅读器 tab 中 ItemPane 上下文向区块提供的 item 为父条目（Zotero contextPane
+ * 会把附件提升为 parentItem），而 ReaderInstance.itemID 是附件 id。若翻译任务
+ * 直接落附件 id，与区块 ctx.itemID 不一致：条目隔离渲染/历史按文章查询都会错位
+ * （表现为翻译成功但卡片不显示、历史区空）。统一归一化为父条目 id。
+ */
+function logicalItemID(readerItemID: number | null | undefined): number | null {
+  if (readerItemID == null) return null;
+  try {
+    const item = Zotero.Items.get(readerItemID);
+    // Zotero 类型中 parentID 为 number | false（无父条目时 false）
+    const parentID = item?.parentID;
+    return typeof parentID === "number" ? parentID : readerItemID;
+  } catch {
+    return readerItemID;
+  }
 }
 
 interface ShortcutPattern {

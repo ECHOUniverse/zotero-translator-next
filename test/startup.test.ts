@@ -165,7 +165,8 @@ describe("startup", function () {
     const selected =
       (win?.ZoteroPane?.getSelectedItems?.()?.[0] as any) ?? null;
     const task = await instance.data.translate.translate({
-      sourceText: "Hello world, this is a translation pipeline test.",
+      // 随机文本避免跨运行缓存命中（缓存命中不落库，历史断言会失败）
+      sourceText: `Hello world, this is a translation pipeline test. ${Date.now()}`,
       channelId: "mymemory",
       itemID: selected?.id ?? null,
     });
