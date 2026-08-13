@@ -158,6 +158,11 @@ describe("startup", function () {
   });
 
   it("MyMemory 渠道真实翻译（网络）", async function () {
+    // CI 环境网络不稳定，真实 HTTP 调用会偶发失败；本地开发环境照常执行
+    if (process.env.CI) {
+      this.skip();
+      return;
+    }
     this.timeout(60000);
     const instance: any = Zotero[config.addonInstance];
     // 关联当前选中条目（新语义：历史按条目隔离，翻译需带 itemID 才会出现在该条目历史区）

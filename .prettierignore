@@ -5,3 +5,9 @@ node_modules
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+# 文档/知识沉淀不参与格式门禁（手写文档无需 prettier 强制格式）
+Doc
+docs
+# Agent 与构建产物
+.pi
+.scaffold

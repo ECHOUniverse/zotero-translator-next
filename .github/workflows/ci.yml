@@ -9,6 +9,15 @@ on:
       - main
 
 jobs:
+  # 纯 Node 单测（不依赖 Zotero 环境/网络，秒级完成，快速反馈）
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup JS
+        uses: zotero-plugin-dev/workflows/setup-js@main
+      - name: Run Unit Tests
+        run: npm run test:unit
+
   lint:
     runs-on: ubuntu-latest
     env:
@@ -44,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    env:
+      # CI 上跳过真实网络翻译用例（MyMemory 不稳定，避免 flaky 失败）
+      CI: "true"
     steps:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
