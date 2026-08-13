@@ -289,11 +289,28 @@
   text-align: center;
 }
 
-/* 跨区域选区区块（多选拼段翻译） */
-.ztr-selection-toolbar {
-  display: flex;
+/* 跨区域选区（内嵌于 reader 区块，工具栏与「当前翻译」之间） */
+.ztr-selection-card {
   gap: 6px;
+}
+
+/* 卡片标题行：标题 + 段数徽章 */
+.ztr-selection-card-head {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ztr-selection-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--fill-secondary, #888);
+  background: var(--fill-tertiary, #e8e8e8);
+  border-radius: 8px;
+  padding: 0 7px;
+  line-height: 1.6;
+  user-select: none;
 }
 
 .ztr-selection-list {
@@ -325,14 +342,19 @@
   user-select: none;
 }
 
+/* 页码徽章 */
 .ztr-selection-page {
   flex: 0 0 auto;
-  color: var(--fill-secondary, #888);
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--fill-tertiary, #e8e8e8);
+  color: var(--fill-secondary, #666);
   font-size: 11px;
+  line-height: 1.6;
   user-select: none;
 }
 
-/* 文本预览：单行截断，全文在 title */
+/* 文本预览：头尾摘要（JS 截断）；CSS 截断仅兜底防极端超长 */
 .ztr-selection-preview {
   flex: 1 1 auto;
   min-width: 0;
@@ -353,6 +375,41 @@
 
 .ztr-selection-item .ztr-icon-btn:hover {
   color: var(--accent-red, #db2c3a);
+}
+
+/* 卡片动作行：翻译全部（主色）/ 清空（危险色） */
+.ztr-selection-card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ztr-selection-card-actions .ztr-btn {
+  flex: 1;
+}
+
+/* 主按钮：实心主色 */
+.ztr-btn-primary {
+  background: var(--accent-blue, #4072e5);
+  border-color: var(--accent-blue, #4072e5);
+  color: #fff;
+}
+
+.ztr-btn-primary:hover {
+  background: var(--accent-blue, #4072e5);
+  filter: brightness(1.1);
+}
+
+/* 危险按钮：红色文字 + 边框，hover 浅红底 */
+.ztr-btn-danger {
+  color: var(--accent-red, #db2c3a);
+  border-color: var(--accent-red, #db2c3a);
+  background: transparent;
+}
+
+.ztr-btn-danger:hover {
+  background: color-mix(in srgb, var(--accent-red, #db2c3a) 10%, transparent);
+  filter: none;
 }
 
 /* 偏好面板辅助 */

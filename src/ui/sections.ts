@@ -41,10 +41,17 @@ import {
   joinRegions,
   type SelectionRegion,
 } from "../modules/selection";
+import { headTail } from "../utils/truncate";
 
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
-export const SELECTION_PANE_ID = "translator-selection";
+
+/** 跨区域选区在 reader 区块内的容器 id（不注册独立区块，见 Doc D3 变更） */
+const SELECTION_BLOCK_ID = "ztr-reader-selection";
+
+/** 区域原文头/尾各保留的字符数（行内头尾摘要） */
+const PREVIEW_HEAD_LEN = 24;
+const PREVIEW_TAIL_LEN = 24;
 
 /** 侧栏历史区每篇文章显示条数上限 */
 const HISTORY_LIMIT = 20;
@@ -84,10 +91,8 @@ interface SectionCtx {
   refresh: (() => Promise<void>) | null;
   /** 订阅解绑 */
   unsubscribe: (() => void) | null;
-  /** 跨区域选区管理器（仅 selection 区块持有） */
+  /** 跨区域选区管理器（reader 区块持有） */
   selection: SelectionManager | null;
-  /** onInit/onItemChange 提供的启用开关（仅 selection 区块持有） */
-  setEnabled: ((enabled: boolean) => void) | null;
 }
 
 const contexts = new Map<string, SectionCtx>();
@@ -132,6 +137,18 @@ export function registerSections(
         body: body as HTMLDivElement,
         refresh,
       });
+      // 跨区域选区：订阅选区变化 → 激活/隐藏 + 重绘（内嵌容器，无独立区块）
+      const ctx = getCtx(body as HTMLDivElement);
+      if (!ctx) return;
+      ctx.selection = selection;
+      const selUnsub = selection.subscribe(() => {
+        updateSelectionBlock(ctx);
+      });
+      const prevUnsub = ctx.unsubscribe;
+      ctx.unsubscribe = () => {
+        prevUnsub?.();
+        selUnsub();
+      };
     },
     onItemChange: ({ body, item, tabType, setEnabled }) => {
       // 文档：更新数据 + setEnabled（不渲染区块）
@@ -140,6 +157,8 @@ export function registerSections(
       if (ctx) {
         ctx.tabType = tabType;
         ctx.itemID = item?.id ?? null;
+        // 选区块激活条件依赖 tabType + itemID，随条目变化更新
+        updateSelectionBlock(ctx);
         void refreshHistoryFor(ctx);
       }
     },
@@ -150,6 +169,7 @@ export function registerSections(
       ctx.rendered = true;
       ctx.itemID = item?.id ?? null;
       renderSection(translate, ctx);
+      updateSelectionBlock(ctx);
     },
     onAsyncRender: async ({ body, item }) => {
       // 文档：耗时渲染（异步查询历史）
@@ -205,61 +225,6 @@ export function registerSections(
     },
   });
 
-  // 跨区域选区区块（仅 tabType='reader'；默认 setEnabled(false) 完全隐藏，
-  // 加入第一段时激活出现，清空后消失；不渲染空态）
-  Zotero.ItemPaneManager.registerSection({
-    paneID: SELECTION_PANE_ID,
-    pluginID,
-    header: {
-      l10nID: getLocaleID("ztr-section-selection-header"),
-      icon: "chrome://zotero-translator-next/content/icons/section-16.svg",
-    },
-    sidenav: {
-      l10nID: getLocaleID("ztr-section-selection-header"),
-      icon: "chrome://zotero-translator-next/content/icons/section-20.svg",
-    },
-    bodyXHTML: selectionBodyXHTML(),
-    onInit: ({ body, refresh, setEnabled }) => {
-      initCtx(translate, {
-        paneID: SELECTION_PANE_ID,
-        kind: "reader",
-        body: body as HTMLDivElement,
-        refresh,
-      });
-      const ctx = getCtx(body as HTMLDivElement);
-      if (!ctx) return;
-      ctx.selection = selection;
-      ctx.setEnabled = setEnabled;
-      // 默认完全隐藏（含标题栏，零 UI 占用）；加入第一段时由订阅激活
-      setEnabled(false);
-      // 选区变化 → 激活/隐藏 + 重绘列表
-      const selUnsub = selection.subscribe(() => {
-        onSelectionChanged(ctx);
-      });
-      const prevUnsub = ctx.unsubscribe;
-      ctx.unsubscribe = () => {
-        prevUnsub?.();
-        selUnsub();
-      };
-    },
-    onItemChange: ({ body, item, tabType, setEnabled }) => {
-      const ctx = getCtx(body as HTMLDivElement);
-      if (!ctx) return;
-      ctx.tabType = tabType;
-      ctx.itemID = item?.id ?? null;
-      ctx.setEnabled = setEnabled;
-      // 激活条件：当前文献有选区且处于阅读器 tab
-      updateSelectionSection(ctx);
-    },
-    onRender: ({ body, item }) => {
-      const ctx = getCtx(body as HTMLDivElement);
-      if (!ctx) return;
-      ctx.rendered = true;
-      ctx.itemID = item?.id ?? null;
-      renderSelectionList(ctx);
-    },
-  });
-
   return { readerPaneID: READER_PANE_ID, itemPaneID: ITEM_PANE_ID };
 }
 
@@ -284,7 +249,6 @@ function initCtx(
     refresh: init.refresh,
     unsubscribe: null,
     selection: null,
-    setEnabled: null,
   };
   contexts.set(ctxKey(init.body), ctx);
   // 订阅任务状态变化：更新结果容器 + 成功时刷新历史列表（不触发区块级渲染）
@@ -310,6 +274,7 @@ function readerBodyXHTML(): string {
 <html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
 <html:div class="ztr-section" id="ztr-reader-section">
   <html:div class="ztr-toolbar" id="ztr-reader-toolbar"></html:div>
+  <html:div class="ztr-selection" id="ztr-reader-selection" hidden></html:div>
   <html:div class="ztr-section-title-row" id="ztr-reader-current-title"></html:div>
   <html:div class="ztr-result" id="ztr-reader-result"></html:div>
   <html:div class="ztr-summary" id="ztr-reader-summary"></html:div>
@@ -328,15 +293,6 @@ function itemBodyXHTML(): string {
   <html:div class="ztr-summary" id="ztr-item-summary"></html:div>
   <html:div class="ztr-section-title-row" id="ztr-item-history-title"></html:div>
   <html:div class="ztr-history" id="ztr-item-history"></html:div>
-</html:div>`;
-}
-
-function selectionBodyXHTML(): string {
-  return `
-<html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
-<html:div class="ztr-section" id="ztr-selection-section">
-  <html:div class="ztr-selection-toolbar" id="ztr-selection-toolbar"></html:div>
-  <html:div class="ztr-selection-list" id="ztr-selection-list"></html:div>
 </html:div>`;
 }
 
@@ -697,40 +653,122 @@ function getSelectedItem(): Zotero.Item | null {
 }
 
 // ---------------------------------------------------------------------------
-// 跨区域选区区块（多选拼段翻译）
+// 跨区域选区（多选拼段翻译；内嵌于 reader 区块，位于工具栏与「当前翻译」之间）
 // ---------------------------------------------------------------------------
 
-/** 选区变化（add/remove/clear）→ 按当前文献激活/隐藏 + 重绘 */
-function onSelectionChanged(ctx: SectionCtx): void {
-  if (ctx.itemID == null) return;
-  updateSelectionSection(ctx);
+/** 选区容器（reader 区块内；无选区时整块 hidden） */
+function selectionBlock(ctx: SectionCtx): HTMLDivElement | null {
+  return ctx.body.querySelector<HTMLDivElement>(`#${SELECTION_BLOCK_ID}`);
 }
 
-/** 激活条件 + 重绘（onItemChange / 选区订阅共用）：
- *  当前文献有选区且处于阅读器 tab → setEnabled(true) + 渲染列表；
- *  否则 setEnabled(false)（整区块含标题栏完全隐藏）。 */
-function updateSelectionSection(ctx: SectionCtx): void {
+/** 激活条件 + 显隐（选区订阅 / onItemChange / onRender 共用）：
+ *  当前文献有选区且处于阅读器 tab → 显示 + 重绘；否则隐藏。 */
+function updateSelectionBlock(ctx: SectionCtx): void {
+  const block = selectionBlock(ctx);
+  if (!block) return;
   const active =
     ctx.itemID != null &&
     ctx.selection?.has(ctx.itemID) === true &&
     ctx.tabType === "reader";
-  ctx.setEnabled?.(active);
-  if (active) renderSelectionList(ctx);
+  block.hidden = !active;
+  if (active) renderSelectionBlock(ctx);
 }
 
-/** 重绘选区列表 + 工具栏（幂等；无选区/无条目时清空） */
+/** 重绘选区卡片（骨架幂等；列表随选区变化刷新） */
+function renderSelectionBlock(ctx: SectionCtx): void {
+  if (!ctx.rendered) return;
+  const block = selectionBlock(ctx);
+  if (!block) return;
+  buildSelectionCard(ctx);
+  renderSelectionList(ctx);
+}
+
+/** 卡片骨架（幂等）：标题行 + 列表容器 + 动作行 */
+function buildSelectionCard(ctx: SectionCtx): void {
+  const block = selectionBlock(ctx);
+  if (!block || block.hasChildNodes()) return;
+  const doc = ctx.doc;
+
+  const card = el(doc, "div");
+  card.className = "ztr-card ztr-selection-card";
+
+  // 标题行：标题 + 段数徽章
+  const head = el(doc, "div");
+  head.className = "ztr-selection-card-head";
+  const title = el(doc, "span");
+  title.className = "ztr-section-title-text";
+  title.textContent = getString("ztr-section-selection-title");
+  head.append(title);
+  const count = el(doc, "span");
+  count.className = "ztr-selection-count";
+  head.append(count);
+  card.append(head);
+
+  // 区域列表
+  const list = el(doc, "div");
+  list.className = "ztr-selection-list";
+  card.append(list);
+
+  // 动作行：翻译全部（主按钮）/ 清空（危险色）
+  const actions = el(doc, "div");
+  actions.className = "ztr-selection-card-actions";
+  const translateAll = el(doc, "button");
+  translateAll.className = "ztr-btn ztr-btn-primary";
+  translateAll.textContent = getString("ztr-selection-translate-all");
+  translateAll.addEventListener("click", () => {
+    const itemID = ctx.itemID;
+    if (itemID == null || !ctx.selection) return;
+    // 拼接合成完整段落，走现有管线（格式化→分块→渠道→历史）
+    const joined = joinRegions(ctx.selection.get(itemID));
+    if (!joined) return;
+    void translateManager
+      ?.translate({
+        sourceText: joined,
+        itemID,
+        channelId: getSelectedChannelId(),
+      })
+      .catch((e) => ztoolkit.log(`[selection] translate error: ${e.message}`));
+  });
+  actions.append(translateAll);
+
+  const clear = el(doc, "button");
+  clear.className = "ztr-btn ztr-btn-danger";
+  clear.textContent = getString("ztr-selection-clear");
+  clear.addEventListener("click", () => {
+    const itemID = ctx.itemID;
+    if (itemID == null || !ctx.selection) return;
+    const win = ctx.doc.defaultView as Window | null;
+    if (win && !win.confirm(getString("ztr-selection-clear-confirm"))) return;
+    ctx.selection.clear(itemID);
+  });
+  actions.append(clear);
+  card.append(actions);
+
+  block.replaceChildren(card);
+}
+
+/** 重绘区域列表（含段数徽章；无选区时清空） */
 function renderSelectionList(ctx: SectionCtx): void {
   if (!ctx.rendered) return;
-  const listBox = ctx.body.querySelector<HTMLDivElement>("#ztr-selection-list");
-  if (!listBox) return;
+  const block = selectionBlock(ctx);
+  if (!block) return;
+  const listBox = block.querySelector<HTMLDivElement>(".ztr-selection-list");
+  const countBadge = block.querySelector<HTMLSpanElement>(
+    ".ztr-selection-count",
+  );
   const itemID = ctx.itemID;
   const regions =
     itemID != null && ctx.selection ? ctx.selection.get(itemID) : [];
+  if (countBadge) {
+    countBadge.textContent = getString("ztr-selection-count", {
+      args: { count: regions.length },
+    });
+  }
+  if (!listBox) return;
   if (regions.length === 0) {
     listBox.replaceChildren();
     return;
   }
-  buildSelectionToolbar(ctx);
 
   const doc = ctx.doc;
   const showOrdinal = regions.length >= 2;
@@ -749,7 +787,7 @@ function renderSelectionList(ctx: SectionCtx): void {
   }
 }
 
-/** 区域行：序号 + 页码 + 文本预览（单行截断，title 全文）+ ×删除 */
+/** 区域行：序号 + 页码徽章 + 头尾摘要（title 全文）+ ×删除；行点击跳页核对 */
 function selectionRow(
   doc: Document,
   region: SelectionRegion,
@@ -776,7 +814,12 @@ function selectionRow(
   row.append(page);
   const preview = el(doc, "span");
   preview.className = "ztr-selection-preview";
-  preview.textContent = region.text;
+  // 头尾摘要：原文不显示全，保留头/尾各 PREVIEW_*_LEN 字符，全文在 title
+  preview.textContent = headTail(
+    region.text,
+    PREVIEW_HEAD_LEN,
+    PREVIEW_TAIL_LEN,
+  );
   row.append(preview);
   const del = el(doc, "button");
   del.className = "ztr-icon-btn";
@@ -788,46 +831,6 @@ function selectionRow(
   });
   row.append(del);
   return row;
-}
-
-/** 工具栏（幂等）：翻译全部 / 清空 */
-function buildSelectionToolbar(ctx: SectionCtx): void {
-  const toolbar = ctx.body.querySelector<HTMLDivElement>(
-    "#ztr-selection-toolbar",
-  );
-  if (!toolbar || toolbar.hasChildNodes()) return;
-  const doc = ctx.doc;
-
-  const translateAll = el(doc, "button");
-  translateAll.className = "ztr-btn";
-  translateAll.textContent = getString("ztr-selection-translate-all");
-  translateAll.addEventListener("click", () => {
-    const itemID = ctx.itemID;
-    if (itemID == null || !ctx.selection) return;
-    // 拼接合成完整段落，走现有管线（格式化→分块→渠道→历史）
-    const joined = joinRegions(ctx.selection.get(itemID));
-    if (!joined) return;
-    void translateManager
-      ?.translate({
-        sourceText: joined,
-        itemID,
-        channelId: getSelectedChannelId(),
-      })
-      .catch((e) => ztoolkit.log(`[selection] translate error: ${e.message}`));
-  });
-  toolbar.append(translateAll);
-
-  const clear = el(doc, "button");
-  clear.className = "ztr-btn";
-  clear.textContent = getString("ztr-selection-clear");
-  clear.addEventListener("click", () => {
-    const itemID = ctx.itemID;
-    if (itemID == null || !ctx.selection) return;
-    const win = ctx.doc.defaultView as Window | null;
-    if (win && !win.confirm(getString("ztr-selection-clear-confirm"))) return;
-    ctx.selection.clear(itemID);
-  });
-  toolbar.append(clear);
 }
 
 /**

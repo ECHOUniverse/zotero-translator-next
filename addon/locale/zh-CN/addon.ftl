@@ -47,6 +47,18 @@ ztr-collapse = 收起
 ztr-translate-selection = 翻译选中内容
 ztr-translate-item = 翻译选中条目
 
+# 跨区域选区（多选拼段翻译）
+ztr-section-selection-title = 跨区域选区
+ztr-selection-count = { $count } 段
+ztr-add-to-selection = 加入选区
+ztr-added-to-selection = ✓ 已加入({ $count }段)
+ztr-already-in-selection = 已在选区中
+ztr-selection-limit = 已达上限(50段)
+ztr-selection-translate-all = 翻译全部
+ztr-selection-clear = 清空
+ztr-selection-clear-confirm = 清空当前文献的跨区域选区？
+ztr-selection-delete = 移除此区域
+
 # 总结
 ztr-summarizing = 总结中…
 ztr-save-summary = 存入历史
