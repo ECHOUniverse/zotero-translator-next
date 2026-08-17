@@ -10,12 +10,24 @@
   padding: 4px 0;
   font-size: 12px;
   color: var(--fill-primary, #333);
+  box-sizing: border-box;
+  /* 隔离内容宽度向内联尺寸的传播：
+     区块内的 nowrap 长内容（如英文标题 .ztr-history-source）会经 Gecko flex
+     min-content 链（body → custom-section → item-pane-content → item-pane）
+     把整个右侧详情栏撑爆（item-pane scrollWidth 远超可见宽度，右缘被裁）。
+     contain:inline-size 让本区块宽度只由父容器决定；min-width:0/width:100%
+     允许在父 flex 中正常收缩。Chrome 无此传播问题，Gecko 必须显式隔离。 */
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  contain: inline-size;
 }
 
 .ztr-toolbar {
   display: flex;
   gap: 6px;
   align-items: center;
+  min-width: 0;
 }
 
 .ztr-select {
@@ -231,6 +243,7 @@
   gap: 6px;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
 }
 
 /* 历史条目工具按钮组（总结/删除） */
@@ -254,16 +267,18 @@
   white-space: pre-wrap;
   word-break: break-word;
   margin-top: 2px;
-  /* 长文本固定显示 3 行，超长由展开按钮控制 */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  /* 长文本固定显示 3 行，超长由展开按钮控制。
+     不使用 -webkit-box/-webkit-line-clamp（Gecko 在中英混排 + 窄车道 +
+     reflow 场景会把段落渲染成「只见首尾片段、中间整行消失」的空洞，见
+     v0.5.2 用户故障）。改用块级 max-height + overflow，Gecko 全程正常换行。 */
+  display: block;
+  max-height: calc(12px * 1.4 * 3); /* 3 行 */
   overflow: hidden;
 }
 
 /* 展开态：取消行数限制，显示全文 */
 .ztr-history-item.expanded .ztr-history-preview {
-  -webkit-line-clamp: unset;
+  max-height: none;
   overflow: visible;
 }
 
