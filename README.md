@@ -10,7 +10,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/ECHOUniverse/zotero-translator-next?label=release)](https://github.com/ECHOUniverse/zotero-translator-next/releases/latest)
 [![Zotero](https://img.shields.io/badge/Zotero-7%2F8%2F9-green)](https://www.zotero.org)
 
-[English](./README.en.md) · [方案文档](./Doc/PLAN.md)
+[English](./README.en.md) · [方案文档](./docs/plans/PLAN.md)
 
 ## 功能特性
 

@@ -8,7 +8,7 @@
  * - 去重：同「页+位置」（pageIndex + sortIndex）静默去重
  *
  * 纯逻辑、无 Zotero 依赖（可单测）；ztoolkit 兜底防单测环境无全局。
- * @see Doc/更新实施-跨区域选择.md §5/§6.5
+ * @see docs/plans/更新实施-跨区域选择.md §5/§6.5
  */
 
 export interface SelectionRegion {
