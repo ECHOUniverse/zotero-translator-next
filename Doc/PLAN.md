@@ -47,6 +47,12 @@ Zotero 文献翻译插件。与 zotero-pdf-translate 的差异化：
 | Q20 | 当前/历史  | 分区标题+分隔线（「当前翻译」/「翻译历史」）；结果卡片**按条目隔离**（切换条目清空）；历史中与当前任务精确匹配（sourceHash+engine+targetLang）的记录标「当前」徽标                   |
 | Q21 | 全部历史   | 独立窗口（`content/history.xhtml`）浏览全部历史：打开默认当前文章 tab，顶部横向滚动文章 tab 条 + 「未关联条目」tab，全量显示，操作与侧栏一致；标题栏提供「清空本条」「查看全部」入口 |
 | Q22 | 任务 itemID 语义 | 翻译任务 itemID 一律用**逻辑条目 id**（附件→父条目，`logicalItemID` 归一化）：阅读器 tab 中区块 ctx.itemID 为父条目（Zotero contextPane 提升），任务若落附件 id 会触发条目隔离显示空态（v0.4.0 回归，v0.4.1 修复）。排查经验见 [`问题排查-阅读器翻译无动作.md`](./问题排查-阅读器翻译无动作.md) |
+| Q23 | Zotero 10 基线 | 双支持 `6.999 ~ 10.*`；现在适配 beta（官方：FF 140 ESR 与 9 相同，无 Mozilla 平台变更） |
+| Q24 | strict_max 策略 | `strict_max_version: "10.*"`（10.x 默认放行；11+ 计划再评估）；update.json 同步 `10.*` |
+| Q25 | 改动范围 | manifest + 4 风险点定向核对 + 回归，不做全量重写 |
+| Q26 | 工具链 | 升级 scaffold 0.8.8 / toolkit 5.2.0 / types 4.1.3；吸收 `ZoteroToolkit` 从 `/ztoolkit` 导入的破坏变更 |
+| Q27 | 本地化 | 保守核实；坏则迁移到 Zotero 10 自动注册（plugins.js registerLocales）；主动迁移列入计划 |
+| Q28 | 范围外 | undo/redo、多选/viewMode、CI 的 Zotero 10 job、Zotero 11+ 再评估 —— 全部列入 v2/计划 |
 
 假设（无异议即生效）：快捷键默认 `Cmd/Ctrl+Shift+T` 翻译、`Cmd/Ctrl+Shift+S` 总结（可配置）；界面中英双语（Fluent）；原文语言自动检测 + 手动覆盖；默认目标语言中文（zh-CN）。
 

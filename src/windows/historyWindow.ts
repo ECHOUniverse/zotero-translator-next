@@ -60,7 +60,8 @@ function str(id: string): string {
 function itemTitle(itemID: number): string {
   try {
     const item = Zotero.Items.get(itemID);
-    const t = item?.getField("title");
+    if (!item) return "";
+    const t = item.getField("title");
     return t ? String(t) : "";
   } catch {
     return "";

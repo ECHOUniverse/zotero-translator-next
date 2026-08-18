@@ -201,9 +201,10 @@ export class SummaryManager {
     summary: string,
   ): Promise<Zotero.Item | null> {
     if (itemID == null) return null;
-    let item: Zotero.Item;
+    let item: Zotero.Item | null;
     try {
-      item = Zotero.Items.get(itemID);
+      const got = Zotero.Items.get(itemID);
+      item = got || null;
     } catch {
       return null;
     }

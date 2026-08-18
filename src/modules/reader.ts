@@ -265,8 +265,9 @@ function logicalItemID(readerItemID: number | null | undefined): number | null {
   if (readerItemID == null) return null;
   try {
     const item = Zotero.Items.get(readerItemID);
+    if (!item) return readerItemID;
     // Zotero 类型中 parentID 为 number | false（无父条目时 false）
-    const parentID = item?.parentID;
+    const parentID = item.parentID;
     return typeof parentID === "number" ? parentID : readerItemID;
   } catch {
     return readerItemID;

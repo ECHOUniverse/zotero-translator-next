@@ -155,7 +155,7 @@ export function registerSections(
       setEnabled(tabType === "reader");
       const ctx = getCtx(body as HTMLDivElement);
       if (ctx) {
-        ctx.tabType = tabType;
+        ctx.tabType = tabType === "reader" ? "reader" : "library";
         ctx.itemID = item?.id ?? null;
         // 选区块激活条件依赖 tabType + itemID，随条目变化更新
         updateSelectionBlock(ctx);
@@ -205,7 +205,7 @@ export function registerSections(
       setEnabled(tabType === "library");
       const ctx = getCtx(body as HTMLDivElement);
       if (ctx) {
-        ctx.tabType = tabType;
+        ctx.tabType = tabType === "reader" ? "reader" : "library";
         ctx.itemID = item?.id ?? null;
         void refreshHistoryFor(ctx);
       }
@@ -1061,7 +1061,8 @@ function historyItem(
 function getItemTitle(itemID: number): string {
   try {
     const item = Zotero.Items.get(itemID);
-    return item?.getField("title") ?? "";
+    if (!item) return "";
+    return item.getField("title") ?? "";
   } catch {
     return "";
   }
