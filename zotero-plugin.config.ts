@@ -50,9 +50,11 @@ export default defineConfig({
     waitForPlugin: `() => Zotero.${pkg.config.addonInstance}.data.initialized`,
   },
 
+  // GitHub 发布（release 创建 + xpi/update.json 上传）由 tag 推送触发的
+  // .github/workflows/release.yml（CI）完成；本地 release 仅做版本与 git 操作。
   release: {
     github: {
-      enable: "always",
+      enable: "ci",
       updater: "release",
     },
   },
