@@ -9,6 +9,7 @@
 import { prefs } from "../prefs";
 import { consumeSSE } from "../utils/sse";
 import { requestStream } from "../utils/network";
+import { DEEPSEEK_DEFAULT_MODEL } from "./deepseek-admin";
 import type { CancelToken } from "../utils/cancel";
 import type {
   TranslateChannelId,
@@ -35,7 +36,7 @@ export const DEEPSEEK_PRESET: Omit<OpenAIConfig, "apiKey"> = {
   id: "deepseek",
   name: "DeepSeek",
   baseURL: "https://api.deepseek.com",
-  model: "deepseek-chat",
+  model: DEEPSEEK_DEFAULT_MODEL,
   prompt: DEFAULT_TRANSLATE_PROMPT,
 };
 

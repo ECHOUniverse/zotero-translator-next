@@ -23,7 +23,7 @@ pref("bing.azureRegion", "");
 pref("deepseek.enabled", true);
 pref("deepseek.apiKey", "");
 pref("deepseek.baseURL", "https://api.deepseek.com");
-pref("deepseek.model", "deepseek-chat");
+pref("deepseek.model", "deepseek-v4-flash");
 pref(
   "deepseek.prompt",
   "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation.",

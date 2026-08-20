@@ -81,3 +81,8 @@ ztr-menuitem-translate-abstract =
 
 # Misc
 ztr-no-text = This item has no title or abstract to translate
+
+# Preferences pane (for getString; XHTML strings live in preferences.ftl)
+pref-title = ZoteroTranslatorNext
+ztr-clear-history-confirm = Clear all translation history? This cannot be undone.
+ztr-clear-history-done = Cleared

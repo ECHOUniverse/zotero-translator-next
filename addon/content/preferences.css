@@ -1,0 +1,135 @@
+/* ZoteroTranslatorNext 偏好面板（仅 preferences.xhtml 使用） */
+
+#ztr-prefs-root,
+.ztr-prefs-root {
+  max-width: 44em;
+}
+
+.ztr-prefs-field {
+  display: grid;
+  grid-template-columns: 10em minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.ztr-prefs-field-block {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.ztr-prefs-control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  overflow: visible;
+}
+
+.ztr-prefs-control input,
+.ztr-prefs-control menulist {
+  flex: 1;
+  min-width: 0;
+}
+
+#ztr-prefs-root input[type="text"],
+#ztr-prefs-root input[type="password"],
+#ztr-prefs-root input[type="number"],
+#ztr-prefs-root textarea {
+  box-sizing: border-box;
+}
+
+#ztr-prefs-root input[type="number"] {
+  max-width: 10em;
+}
+
+#ztr-prefs-root textarea {
+  width: 100%;
+  min-height: 8em;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.ztr-prefs-hint {
+  font-size: 11px;
+  color: var(--fill-secondary, #888);
+  margin: 2px 0 8px;
+  line-height: 1.4;
+}
+
+.ztr-prefs-warn {
+  color: var(--accent-red, #db2c3a);
+}
+
+.ztr-prefs-subsection {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border50, #eee);
+  border-radius: 6px;
+}
+
+.ztr-prefs-subsection-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fill-secondary, #888);
+  margin-bottom: 6px;
+}
+
+.ztr-prefs-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.ztr-prefs-balance {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--fill-quinary, #fafafa);
+  margin: 4px 0 0;
+}
+
+.ztr-prefs-custom-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.ztr-prefs-custom-form input {
+  min-width: 8em;
+  flex: 1;
+}
+
+.ztr-prefs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.ztr-prefs-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border50, #eee);
+  border-radius: 4px;
+}
+
+.ztr-prefs-row-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.ztr-prefs-row button {
+  min-width: 2em;
+}
+
+.danger-button {
+  color: var(--accent-red, #db2c3a);
+  margin-top: 6px;
+}

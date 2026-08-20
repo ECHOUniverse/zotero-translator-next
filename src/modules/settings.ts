@@ -10,6 +10,18 @@ import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { prefs } from "../prefs";
 import { channelRegistry } from "../services";
+import {
+  TARGET_LANGUAGE_CODES,
+  SOURCE_LANGUAGE_CODES,
+  languageLabel,
+} from "../constants/languages";
+import {
+  DEEPSEEK_BUILTIN_MODELS,
+  getDeepSeekBalance,
+  isDeepSeekLegacyModel,
+  listDeepSeekModels,
+  type DeepSeekBalanceInfo,
+} from "../services/deepseek-admin";
 
 /** 偏好窗口为 XUL 文档：创建 HTML 元素须显式命名空间 */
 const HTML_NS = "http://www.w3.org/1999/xhtml";
@@ -21,12 +33,51 @@ function el(doc: Document, tag: string): any {
 /** 已注册的偏好面板 id（openPreferences 定位用） */
 let preferencePaneID: string | null = null;
 
+/** 本次设置会话中从 API 拉到的模型 id */
+let fetchedDeepSeekModels: string[] = [];
+
+type XULMenulist = Element & { value: string };
+
+function menupopupOf(menulist: Element): Element | null {
+  return menulist.querySelector("menupopup");
+}
+
+const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
+function createMenuItem(doc: Document, value: string, label: string): Element {
+  const xulDoc = doc as Document & {
+    createXULElement?: (tag: string) => Element;
+  };
+  const item = xulDoc.createXULElement
+    ? xulDoc.createXULElement("menuitem")
+    : doc.createElementNS(XUL_NS, "menuitem");
+  item.setAttribute("value", value);
+  item.setAttribute("label", label);
+  return item;
+}
+
+function createXulCheckbox(doc: Document): any {
+  const xulDoc = doc as Document & {
+    createXULElement?: (tag: string) => Element;
+  };
+  const cb = xulDoc.createXULElement
+    ? xulDoc.createXULElement("checkbox")
+    : doc.createElementNS(XUL_NS, "checkbox");
+  cb.setAttribute("native", "true");
+  return cb;
+}
+
+function clearMenupopup(popup: Element): void {
+  popup.replaceChildren();
+}
+
 export async function registerPreferencePane(): Promise<void> {
   preferencePaneID = await Zotero.PreferencePanes.register({
     pluginID: config.addonID,
     src: "content/preferences.xhtml",
-    label: getString("ztr-prefs-title"),
+    label: getString("pref-title"),
     image: `chrome://${config.addonRef}/content/icons/favicon@0.5x.png`,
+    stylesheets: [`chrome://${config.addonRef}/content/preferences.css`],
   });
 }
 
@@ -55,19 +106,44 @@ export function openPluginPreferences(): void {
 /** 偏好窗口加载时：初始化交互逻辑 */
 export function initPrefsWindow(win: Window): void {
   const doc = win.document;
+  try {
+    (win as any).MozXULElement?.insertFTLIfNeeded?.(
+      `${config.addonRef}-preferences.ftl`,
+    );
+  } catch {
+    // 偏好面板可能无 MozXULElement
+  }
+  fetchedDeepSeekModels = [];
 
-  // 渠道顺序上移/下移 + 启用开关
   const orderBox = doc.querySelector(
     "#ztr-channel-order",
   ) as HTMLElement | null;
   if (orderBox) {
     renderChannelOrder(doc, orderBox);
+    orderBox.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest(
+        "button",
+      ) as HTMLElement | null;
+      if (!btn) return;
+      const id = (btn as any).dataset?.channelId as string | undefined;
+      if (!id) return;
+      const order = prefs.channelsOrder;
+      const idx = order.indexOf(id);
+      if (idx < 0) return;
+      const dir = (btn as any).dataset?.dir;
+      if (dir === "up" && idx > 0) {
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+      } else if (dir === "down" && idx < order.length - 1) {
+        [order[idx], order[idx + 1]] = [order[idx + 1], order[idx]];
+      } else {
+        return;
+      }
+      prefs.channelsOrder = order;
+      renderChannelOrder(doc, orderBox);
+    });
   }
+  syncChannelSubsections(doc);
 
-  // Bing 仅 Azure key 模式（Edge 匿名端点已关闭）
-  void doc.querySelector("#ztr-bing-mode");
-
-  // 自定义渠道增删
   const customBox = doc.querySelector(
     "#ztr-custom-channels",
   ) as HTMLElement | null;
@@ -76,12 +152,44 @@ export function initPrefsWindow(win: Window): void {
     const addBtn = doc.querySelector(
       "#ztr-add-channel",
     ) as HTMLButtonElement | null;
-    addBtn?.addEventListener("command", () => {
+    addBtn?.addEventListener("click", () => {
       addCustomChannel(doc, customBox);
     });
   }
 
-  // 快捷键输入捕获
+  initLangSelectUI(
+    doc,
+    "#ztr-target-lang",
+    "#ztr-target-lang-custom",
+    TARGET_LANGUAGE_CODES,
+    () => prefs.targetLang,
+    (v) => {
+      prefs.targetLang = v;
+    },
+  );
+  initLangSelectUI(
+    doc,
+    "#ztr-source-lang",
+    "#ztr-source-lang-custom",
+    SOURCE_LANGUAGE_CODES,
+    () => prefs.sourceLang,
+    (v) => {
+      prefs.sourceLang = v;
+    },
+    getString("pref-source-lang-auto"),
+  );
+  initLangSelectUI(
+    doc,
+    "#ztr-summary-lang",
+    "#ztr-summary-lang-custom",
+    ["auto", ...TARGET_LANGUAGE_CODES],
+    () => prefs.summaryLang,
+    (v) => {
+      prefs.summaryLang = v;
+    },
+    getString("pref-summary-lang-auto"),
+  );
+
   for (const [id, kind] of [
     ["#ztr-shortcut-translate", "translate"],
     ["#ztr-shortcut-summary", "summary"],
@@ -107,14 +215,10 @@ export function initPrefsWindow(win: Window): void {
     });
   }
 
-  // 总结语言下拉（自定义值输入框与 summary.lang 直接绑定）
-  initSummaryLangUI(doc);
-
-  // 清空历史
   const clearBtn = doc.querySelector(
     "#ztr-clear-history",
   ) as HTMLButtonElement | null;
-  clearBtn?.addEventListener("command", async () => {
+  clearBtn?.addEventListener("click", async () => {
     const confirmed = win.confirm(getString("ztr-clear-history-confirm"));
     if (!confirmed) return;
     const { clearHistory } = await import("./history");
@@ -123,60 +227,54 @@ export function initPrefsWindow(win: Window): void {
     clearBtn.textContent = getString("ztr-clear-history-done");
   });
 
-  // 渠道排序按钮事件（委托）
-  orderBox?.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest(
-      "button",
-    ) as HTMLElement | null;
-    if (!btn) return;
-    const id = (btn as any).dataset?.channelId as string | undefined;
-    if (!id) return;
-    const order = prefs.channelsOrder;
-    const idx = order.indexOf(id);
-    if (idx < 0) return;
-    const dir = (btn as any).dataset?.dir;
-    if (dir === "up" && idx > 0) {
-      [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
-    } else if (dir === "down" && idx < order.length - 1) {
-      [order[idx], order[idx + 1]] = [order[idx + 1], order[idx]];
-    }
-    prefs.channelsOrder = order;
-    renderChannelOrder(doc, orderBox);
-  });
+  initDeepSeekUI(doc);
 }
 
-/**
- * 总结语言下拉：已知语言码直选；其余值（含自定义输入）落到"自定义…"项。
- * 自定义输入框与 summary.lang 直接绑定（preference 属性）。
- */
-function initSummaryLangUI(doc: Document): void {
-  const select = doc.querySelector(
-    "#ztr-summary-lang",
-  ) as HTMLSelectElement | null;
-  const custom = doc.querySelector(
-    "#ztr-summary-lang-custom",
-  ) as HTMLInputElement | null;
-  if (!select || !custom) return;
+function initLangSelectUI(
+  doc: Document,
+  menulistId: string,
+  customId: string,
+  known: readonly string[],
+  getValue: () => string,
+  setValue: (v: string) => void,
+  autoLabel?: string,
+): void {
+  const menulist = doc.querySelector(menulistId) as XULMenulist | null;
+  const custom = doc.querySelector(customId) as HTMLInputElement | null;
+  const popup = menulist ? menupopupOf(menulist) : null;
+  if (!menulist || !custom || !popup) return;
 
-  const KNOWN = ["auto", "zh-CN", "zh-TW", "en", "ja", "ko"];
+  clearMenupopup(popup);
+  for (const code of known) {
+    const label =
+      code === "auto" && autoLabel
+        ? autoLabel
+        : (languageLabel(code) ?? code);
+    popup.append(createMenuItem(doc, code, label));
+  }
+  popup.append(
+    createMenuItem(doc, "__custom__", getString("pref-lang-custom")),
+  );
+
   const syncSelect = () => {
-    const v = prefs.summaryLang;
-    if (KNOWN.includes(v)) {
-      select.value = v;
+    const v = getValue();
+    if (known.includes(v)) {
+      menulist.value = v;
       custom.hidden = true;
     } else {
-      select.value = "__custom__";
+      menulist.value = "__custom__";
       custom.hidden = false;
     }
   };
   syncSelect();
-  select.addEventListener("change", () => {
-    if (select.value === "__custom__") {
+  menulist.addEventListener("command", () => {
+    if (menulist.value === "__custom__") {
       custom.hidden = false;
       custom.focus();
     } else {
       custom.hidden = true;
-      prefs.summaryLang = select.value;
+      custom.value = menulist.value;
+      setValue(menulist.value);
     }
   });
 }
@@ -197,14 +295,38 @@ function shortcutDisplay(pattern: {
   return parts.join("+");
 }
 
+function setChannelEnabled(id: string, enabled: boolean): void {
+  if (id === "mymemory") prefs.mymemoryEnabled = enabled;
+  else if (id === "bing") prefs.bingEnabled = enabled;
+  else if (id === "deepseek") prefs.deepseekEnabled = enabled;
+}
+
+function syncChannelSubsections(doc: Document): void {
+  const bing = doc.querySelector("#ztr-bing-config") as HTMLElement | null;
+  const ds = doc.querySelector("#ztr-deepseek-config") as HTMLElement | null;
+  if (bing) bing.hidden = !prefs.bingEnabled;
+  if (ds) ds.hidden = !prefs.deepseekEnabled;
+}
+
 function renderChannelOrder(doc: Document, box: HTMLElement): void {
   box.replaceChildren();
   for (const meta of channelRegistry.listAll()) {
     const row = el(doc, "div");
     row.className = "ztr-prefs-row";
+
+    const enable = createXulCheckbox(doc);
+    enable.checked = meta.enabled;
+    enable.disabled = meta.id.startsWith("custom:");
+    enable.title = meta.name;
+    enable.addEventListener("command", () => {
+      setChannelEnabled(meta.id, enable.checked);
+      syncChannelSubsections(doc);
+    });
+
     const name = el(doc, "span");
+    name.className = "ztr-prefs-row-name";
     name.textContent = `${meta.name}${meta.needsConfig && !meta.configured ? " ⚠" : ""}`;
-    row.append(name);
+
     const up = el(doc, "button");
     up.textContent = "↑";
     (up as any).dataset.channelId = meta.id;
@@ -213,7 +335,8 @@ function renderChannelOrder(doc: Document, box: HTMLElement): void {
     down.textContent = "↓";
     (down as any).dataset.channelId = meta.id;
     (down as any).dataset.dir = "down";
-    row.append(up, down);
+
+    row.append(enable, name, up, down);
     box.append(row);
   }
 }
@@ -224,15 +347,23 @@ function renderCustomChannels(doc: Document, box: HTMLElement): void {
     const row = el(doc, "div");
     row.className = "ztr-prefs-row";
     const name = el(doc, "span");
+    name.className = "ztr-prefs-row-name";
     name.textContent = cfg.name;
     const del = el(doc, "button");
     del.textContent = "✕";
-    del.addEventListener("command", () => {
+    del.addEventListener("click", () => {
       prefs.customChannels = prefs.customChannels.filter(
         (c) => c.id !== cfg.id,
       );
+      prefs.channelsOrder = prefs.channelsOrder.filter(
+        (id) => id !== `custom:${cfg.id}`,
+      );
       channelRegistry.invalidate();
       renderCustomChannels(doc, box);
+      const orderBox = doc.querySelector(
+        "#ztr-channel-order",
+      ) as HTMLElement | null;
+      if (orderBox) renderChannelOrder(doc, orderBox);
     });
     row.append(name, del);
     box.append(row);
@@ -265,7 +396,6 @@ function addCustomChannel(doc: Document, box: HTMLElement): void {
     prompt: "",
   });
   prefs.customChannels = channels;
-  // 加入回退链
   const order = prefs.channelsOrder;
   if (!order.includes(`custom:${id}`)) {
     order.push(`custom:${id}`);
@@ -281,4 +411,225 @@ function addCustomChannel(doc: Document, box: HTMLElement): void {
     doc,
     doc.querySelector("#ztr-channel-order") as HTMLElement,
   );
+}
+
+function readDeepSeekForm(doc: Document): { apiKey: string; baseURL: string } {
+  const keyInput = doc.querySelector(
+    "#ztr-deepseek-key",
+  ) as HTMLInputElement | null;
+  const urlInput = doc.querySelector(
+    "#ztr-deepseek-baseurl",
+  ) as HTMLInputElement | null;
+  return {
+    apiKey: (keyInput?.value ?? prefs.deepseekApiKey).trim(),
+    baseURL: (urlInput?.value ?? prefs.deepseekBaseURL).trim(),
+  };
+}
+
+function initDeepSeekUI(doc: Document): void {
+  const menulist = doc.querySelector(
+    "#ztr-deepseek-model-select",
+  ) as XULMenulist | null;
+  const custom = doc.querySelector(
+    "#ztr-deepseek-model-custom",
+  ) as HTMLInputElement | null;
+  const fetchModelsBtn = doc.querySelector(
+    "#ztr-deepseek-fetch-models",
+  ) as HTMLButtonElement | null;
+  const fetchBalanceBtn = doc.querySelector(
+    "#ztr-deepseek-fetch-balance",
+  ) as HTMLButtonElement | null;
+  if (!menulist || !custom) return;
+
+  const syncModelSelect = () => {
+    fillDeepSeekModelSelect(doc, menulist, custom, prefs.deepseekModel);
+    syncLegacyHint(doc, prefs.deepseekModel);
+  };
+  syncModelSelect();
+
+  menulist.addEventListener("command", () => {
+    if (menulist.value === "__custom__") {
+      custom.hidden = false;
+      custom.focus();
+    } else {
+      custom.hidden = true;
+      custom.value = menulist.value;
+      prefs.deepseekModel = menulist.value;
+      syncLegacyHint(doc, menulist.value);
+    }
+  });
+  custom.addEventListener("change", () => {
+    syncLegacyHint(doc, custom.value.trim());
+  });
+
+  fetchModelsBtn?.addEventListener("click", () => {
+    void fetchAndFillModels(doc, menulist, custom, false);
+  });
+  fetchBalanceBtn?.addEventListener("click", () => {
+    void fetchAndShowBalance(doc);
+  });
+
+  const { apiKey } = readDeepSeekForm(doc);
+  if (apiKey) {
+    void fetchAndFillModels(doc, menulist, custom, true);
+  }
+}
+
+function fillDeepSeekModelSelect(
+  doc: Document,
+  menulist: XULMenulist,
+  custom: HTMLInputElement,
+  current: string,
+): void {
+  const popup = menupopupOf(menulist);
+  if (!popup) return;
+
+  const ids = [
+    ...new Set(
+      [...DEEPSEEK_BUILTIN_MODELS, ...fetchedDeepSeekModels, current].filter(
+        Boolean,
+      ),
+    ),
+  ];
+  clearMenupopup(popup);
+  for (const id of ids) {
+    popup.append(createMenuItem(doc, id, id));
+  }
+  popup.append(
+    createMenuItem(doc, "__custom__", getString("pref-deepseek-model-custom")),
+  );
+
+  if (current && ids.includes(current)) {
+    menulist.value = current;
+    custom.hidden = true;
+  } else if (current) {
+    menulist.value = "__custom__";
+    custom.hidden = false;
+  } else {
+    menulist.value = DEEPSEEK_BUILTIN_MODELS[0];
+    custom.hidden = true;
+  }
+}
+
+function syncLegacyHint(doc: Document, model: string): void {
+  const hint = doc.querySelector(
+    "#ztr-deepseek-legacy-hint",
+  ) as HTMLElement | null;
+  if (!hint) return;
+  if (isDeepSeekLegacyModel(model)) {
+    hint.hidden = false;
+    hint.textContent = getString("pref-deepseek-legacy-hint", {
+      args: { model },
+    });
+  } else {
+    hint.hidden = true;
+    hint.textContent = "";
+  }
+}
+
+function setDeepSeekStatus(doc: Document, text: string, warn = false): void {
+  const status = doc.querySelector(
+    "#ztr-deepseek-status",
+  ) as HTMLElement | null;
+  if (!status) return;
+  status.textContent = text;
+  status.classList.toggle("ztr-prefs-warn", warn && Boolean(text));
+}
+
+async function fetchAndFillModels(
+  doc: Document,
+  menulist: XULMenulist,
+  custom: HTMLInputElement,
+  silent: boolean,
+): Promise<void> {
+  const { apiKey, baseURL } = readDeepSeekForm(doc);
+  if (!apiKey) {
+    if (!silent) {
+      setDeepSeekStatus(doc, getString("pref-deepseek-key-required"), true);
+    }
+    return;
+  }
+  const btn = doc.querySelector(
+    "#ztr-deepseek-fetch-models",
+  ) as HTMLButtonElement | null;
+  if (btn) btn.disabled = true;
+  if (!silent) {
+    setDeepSeekStatus(doc, getString("pref-deepseek-status-loading"));
+  }
+  try {
+    fetchedDeepSeekModels = await listDeepSeekModels(baseURL, apiKey);
+    fillDeepSeekModelSelect(doc, menulist, custom, prefs.deepseekModel);
+    if (!silent) setDeepSeekStatus(doc, "");
+  } catch (e) {
+    if (!silent) {
+      setDeepSeekStatus(
+        doc,
+        getString("pref-deepseek-fetch-error", {
+          args: { message: (e as Error).message || String(e) },
+        }),
+        true,
+      );
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function fetchAndShowBalance(doc: Document): Promise<void> {
+  const { apiKey, baseURL } = readDeepSeekForm(doc);
+  const box = doc.querySelector("#ztr-deepseek-balance") as HTMLElement | null;
+  if (!apiKey) {
+    setDeepSeekStatus(doc, getString("pref-deepseek-key-required"), true);
+    return;
+  }
+  const btn = doc.querySelector(
+    "#ztr-deepseek-fetch-balance",
+  ) as HTMLButtonElement | null;
+  if (btn) btn.disabled = true;
+  setDeepSeekStatus(doc, getString("pref-deepseek-status-loading"));
+  try {
+    const balance = await getDeepSeekBalance(baseURL, apiKey);
+    if (box) {
+      const lines = balance.balance_infos.map((info) =>
+        formatBalanceLine(info),
+      );
+      box.textContent = lines.join(" · ");
+      box.hidden = lines.length === 0;
+      box.classList.toggle("ztr-prefs-warn", !balance.is_available);
+    }
+    if (!balance.is_available) {
+      setDeepSeekStatus(
+        doc,
+        getString("pref-deepseek-balance-unavailable"),
+        true,
+      );
+    } else {
+      setDeepSeekStatus(doc, "");
+    }
+  } catch (e) {
+    if (box) {
+      box.hidden = true;
+      box.textContent = "";
+    }
+    setDeepSeekStatus(
+      doc,
+      getString("pref-deepseek-fetch-error", {
+        args: { message: (e as Error).message || String(e) },
+      }),
+      true,
+    );
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function formatBalanceLine(info: DeepSeekBalanceInfo): string {
+  return getString("pref-deepseek-balance-line", {
+    args: {
+      currency: info.currency,
+      total: info.total_balance,
+      granted: info.granted_balance,
+      topped: info.topped_up_balance,
+    },
+  });
 }

@@ -149,12 +149,23 @@ describe("startup", function () {
   it("Fluent 本地化可用（getString 返回文案而非裸 key）", function () {
     const instance: any = Zotero[config.addonInstance];
     assert.ok(instance.data.locale?.current, "locale 应已初始化");
-    // 通过 Localization 直接取字符串（避免依赖内部方法）
     const l10n = instance.data.locale.current;
     const messages = l10n.formatMessagesSync([
       { id: `${config.addonRef}-ztr-status-success` },
+      { id: `${config.addonRef}-pref-title` },
+      { id: `${config.addonRef}-ztr-clear-history-confirm` },
     ]);
     assert.ok(messages[0]?.value, "ztr-status-success 应有译文");
+    assert.equal(
+      messages[1]?.value,
+      "ZoteroTranslatorNext",
+      "偏好面板标题应为插件名，而非裸 key",
+    );
+    assert.ok(
+      messages[2]?.value &&
+        !messages[2].value.includes("ztr-clear-history-confirm"),
+      "清空历史确认文案应已定义",
+    );
   });
 
   it("MyMemory 渠道真实翻译（网络）", async function () {

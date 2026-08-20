@@ -42,6 +42,10 @@ import {
   type SelectionRegion,
 } from "../modules/selection";
 import { headTail } from "../utils/truncate";
+import {
+  TARGET_LANGUAGES,
+  TARGET_LANGUAGE_CODES,
+} from "../constants/languages";
 
 export const READER_PANE_ID = "translator-reader";
 export const ITEM_PANE_ID = "translator-item";
@@ -604,21 +608,16 @@ function buildToolbar(
   // 目标语言
   const langSelect = el(doc, "select");
   langSelect.className = "ztr-select";
-  const langs: Array<[string, string]> = [
-    ["zh-CN", "中文（简体）"],
-    ["zh-TW", "中文（繁體）"],
-    ["en", "English"],
-    ["ja", "日本語"],
-    ["ko", "한국어"],
-    ["de", "Deutsch"],
-    ["fr", "Français"],
-    ["ru", "Русский"],
-    ["es", "Español"],
-  ];
-  for (const [code, label] of langs) {
+  for (const [code, label] of TARGET_LANGUAGES) {
     const opt = el(doc, "option");
     opt.value = code;
     opt.textContent = label;
+    langSelect.append(opt);
+  }
+  if (prefs.targetLang && !TARGET_LANGUAGE_CODES.includes(prefs.targetLang)) {
+    const opt = el(doc, "option");
+    opt.value = prefs.targetLang;
+    opt.textContent = prefs.targetLang;
     langSelect.append(opt);
   }
   langSelect.value = prefs.targetLang;

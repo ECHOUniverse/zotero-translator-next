@@ -81,3 +81,8 @@ ztr-menuitem-translate-abstract =
 
 # 其他
 ztr-no-text = 该条目没有可翻译的标题或摘要
+
+# 偏好面板（getString 用；XHTML 侧见 preferences.ftl）
+pref-title = ZoteroTranslatorNext
+ztr-clear-history-confirm = 确定清空全部翻译历史？此操作不可撤销。
+ztr-clear-history-done = 已清空
