@@ -4,6 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <title>ZoteroTranslatorNext — History</title>
+    <link rel="localization" href="__addonRef__-addon.ftl" />
     <link
       rel="stylesheet"
       href="chrome://zotero-translator-next/content/zoteroPane.css"
@@ -27,6 +28,21 @@
     </div>
     <!-- 内容区：当前 tab 的全量历史 -->
     <div id="ztr-window-content"></div>
+    <!-- 独立 chrome 窗口无 Zotero 全局，须在 bundle 前注入 -->
+    <script>
+      //<![CDATA[
+      (function () {
+        if (typeof globalThis.Zotero !== "undefined") return;
+        try {
+          var wm = Components.classes[
+            "@mozilla.org/appshell/window-mediator;1"
+          ].getService(Components.interfaces.nsIWindowMediator);
+          var w = wm.getMostRecentWindow("navigator:browser");
+          if (w && w.Zotero) globalThis.Zotero = w.Zotero;
+        } catch (e) {}
+      })();
+      //]]>
+    </script>
     <!-- 窗口脚本（独立 bundle） -->
     <script src="chrome://zotero-translator-next/content/scripts/ztr-history.js"></script>
   </body>

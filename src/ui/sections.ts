@@ -419,13 +419,20 @@ function buildSectionTitles(
 }
 
 /** 打开全部历史浏览窗口（chrome 独立窗口，由窗口内脚本自行渲染） */
+const HISTORY_WINDOW_FEATURES =
+  "chrome,titlebar,centerscreen,resizable=yes,width=960,height=720";
+
 function openHistoryWindow(initialItemID: number | null): void {
   try {
+    const inst = (Zotero as any).ZoteroTranslatorNext;
+    if (inst?.data) {
+      inst.data.historyWindowInitialItemID = initialItemID;
+    }
     const mainWin = Zotero.getMainWindows()[0] as any;
     mainWin?.openDialog(
       "chrome://zotero-translator-next/content/history.xhtml",
       "ztr-history",
-      "chrome,titlebar,centerscreen,resizable=yes",
+      HISTORY_WINDOW_FEATURES,
       { initialItemID },
     );
   } catch (e) {

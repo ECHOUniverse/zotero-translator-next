@@ -7,11 +7,12 @@
  * - 当前 tab 全量显示（不限条数），操作与侧栏一致：展开/收起、AI 总结（内联）、
  *   单条删除、「清空本条」
  *
- * l10n：复用主 bundle 的 Fluent 实例（Zotero.ZoteroTranslatorNext.data.locale）。
+ * l10n：独立 Fluent 实例 + history.xhtml 内 localization link。
  * 注意：本 bundle 与主 bundle 独立打包，模块内 import 会重复打包但无副作用。
  */
 
 import {
+  ensureHistoryTable,
   getHistoryItemGroups,
   getHistoryByItem,
   getOrphanHistory,
@@ -25,6 +26,7 @@ import {
   CancelError,
   type CancelToken,
 } from "../utils/cancel";
+import { config } from "../../package.json";
 
 // 窗口页面脚本运行在 chrome 文档上下文；tsconfig 无 DOM lib，这里显式声明
 // （esbuild 编译期仅按类型擦除处理，运行时由 Firefox 提供）
@@ -35,26 +37,108 @@ declare const window: Window & {
   alert?(message?: string): void;
 };
 
-const HTML_NS = "http://www.w3.org/1999/xhtml";
-const ADDON_REF = "zotero-translator-next";
 const ADDON_INSTANCE = "ZoteroTranslatorNext";
 const ALL_LIMIT = 100000; // 全量（getHistoryByItem 的 LIMIT 上限）
 
+/** 独立 chrome 窗口无 Zotero 全局；从主窗口注入 globalThis */
+function bindZoteroGlobal(): boolean {
+  if (typeof (globalThis as any).Zotero !== "undefined") return true;
+  try {
+    const wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(
+      Ci.nsIWindowMediator,
+    );
+    const mainWin = wm.getMostRecentWindow("navigator:browser") as any;
+    if (mainWin?.Zotero) {
+      (globalThis as any).Zotero = mainWin.Zotero;
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    const opener = (window as any).opener;
+    if (opener?.Zotero) {
+      (globalThis as any).Zotero = opener.Zotero;
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
+let windowL10n: any = null;
+
 function el(tag: string, className = ""): any {
-  const node = document.createElementNS(HTML_NS, tag);
+  const node = document.createElement(tag);
   if (className) node.className = className;
   return node;
 }
 
-/** 复用主 bundle 的 Fluent 实例取文案（未初始化时回退 key） */
+function initWindowL10n(): void {
+  if (windowL10n) return;
+  const L10nCtor =
+    typeof Localization !== "undefined"
+      ? Localization
+      : (globalThis as any).Localization;
+  if (!L10nCtor) return;
+  windowL10n = new L10nCtor([`${config.addonRef}-addon.ftl`], true);
+}
+
+/** 独立窗口内 Fluent（不依赖主 bundle 的 locale 实例） */
 function str(id: string): string {
   try {
-    const l10n = (Zotero as any)[ADDON_INSTANCE]?.data?.locale?.current;
-    const msg = l10n?.formatMessagesSync([{ id: `${ADDON_REF}-${id}` }])[0];
+    initWindowL10n();
+    const msg = windowL10n?.formatMessagesSync([
+      { id: `${config.addonRef}-${id}` },
+    ])[0];
     return msg?.value ?? id;
   } catch {
     return id;
   }
+}
+
+/** 与 Zotero 主窗口主题同步（独立 chrome 文档不继承 :root 变量） */
+function syncThemeFromMainWindow(): void {
+  try {
+    const root = document.documentElement;
+    const body = document.body;
+    if (!root || !body) return;
+    const mainRoot = Zotero.getMainWindows()[0]?.document?.documentElement;
+    const scheme = mainRoot?.getAttribute("data-color-scheme");
+    if (scheme === "dark" || scheme === "light") {
+      root.setAttribute("data-color-scheme", scheme);
+      body.setAttribute("data-color-scheme", scheme);
+      return;
+    }
+    const prefersDark = window.matchMedia?.(
+      "(prefers-color-scheme: dark)",
+    )?.matches;
+    if (prefersDark) {
+      root.setAttribute("data-color-scheme", "dark");
+      body.setAttribute("data-color-scheme", "dark");
+    }
+  } catch {
+    // 忽略
+  }
+}
+
+function resolveInitialItemID(): number | null {
+  const args = (window as any).arguments?.[0];
+  if (args && typeof args === "object" && "initialItemID" in args) {
+    return args.initialItemID as number | null;
+  }
+  const fromAddon = (Zotero as any)[ADDON_INSTANCE]?.data
+    ?.historyWindowInitialItemID;
+  return fromAddon ?? null;
+}
+
+function showFatalError(message: string): void {
+  const content = document.getElementById("ztr-window-content");
+  if (!content) return;
+  const err = el("div", "ztr-error");
+  err.textContent = message;
+  content.replaceChildren(err);
 }
 
 function itemTitle(itemID: number): string {
@@ -106,7 +190,24 @@ let currentTab: number | null | undefined = undefined; // undefined=未选择
 // ---------------------------------------------------------------------------
 
 async function init(): Promise<void> {
-  const initialItemID = (window as any).arguments?.[0]?.initialItemID ?? null;
+  if (!bindZoteroGlobal()) {
+    showFatalError("Zotero API unavailable in history window");
+    return;
+  }
+
+  syncThemeFromMainWindow();
+  initWindowL10n();
+
+  const initialItemID = resolveInitialItemID();
+
+  try {
+    await Zotero.initializationPromise;
+    await ensureHistoryTable();
+  } catch (e) {
+    showFatalError((e as Error).message);
+    return;
+  }
+
   document.title = str("ztr-history-window-title");
   const title = document.getElementById("ztr-window-title");
   if (title) title.textContent = str("ztr-history-window-title");
@@ -126,7 +227,11 @@ async function init(): Promise<void> {
     });
   }
 
-  await reloadGroups(initialItemID);
+  try {
+    await reloadGroups(initialItemID);
+  } catch (e) {
+    showFatalError((e as Error).message);
+  }
 }
 
 /** 重新加载分组 → 重建 tab 条；尽量保持当前 tab */
@@ -149,7 +254,8 @@ async function reloadGroups(initialItemID: number | null): Promise<void> {
   ) {
     target = currentTab;
   } else {
-    target = groups[0].itemID;
+    const firstWithItem = groups.find((g) => g.itemID != null);
+    target = firstWithItem?.itemID ?? groups[0].itemID;
   }
 
   renderTabs(target);
@@ -216,12 +322,24 @@ async function loadItem(itemID: number | null): Promise<void> {
   const content = document.getElementById("ztr-window-content");
   if (!content) return;
 
-  const entries =
-    itemID === null
-      ? await getOrphanHistory(ALL_LIMIT)
-      : await getHistoryByItem(itemID, ALL_LIMIT);
+  let entries: HistoryEntry[] = [];
+  let loadError: string | null = null;
+  try {
+    entries =
+      itemID === null
+        ? await getOrphanHistory(ALL_LIMIT)
+        : await getHistoryByItem(itemID, ALL_LIMIT);
+  } catch (e) {
+    loadError = (e as Error).message;
+  }
 
   content.replaceChildren();
+  if (loadError) {
+    const err = el("div", "ztr-error");
+    err.textContent = loadError;
+    content.append(err);
+    return;
+  }
   if (entries.length === 0) {
     const empty = el("div", "ztr-empty");
     empty.textContent = str("ztr-empty-history");
@@ -439,4 +557,5 @@ async function runSummary(
 // 启动
 // ---------------------------------------------------------------------------
 
+bindZoteroGlobal();
 void init();
