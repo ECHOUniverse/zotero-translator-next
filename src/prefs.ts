@@ -223,6 +223,14 @@ export const prefs = {
     set("summary.lang", v);
   },
 
+  // 显示
+  get markdownRender() {
+    return get<boolean>("display.markdown");
+  },
+  set markdownRender(v: boolean) {
+    set("display.markdown", v);
+  },
+
   // 格式化规则开关
   get formatterMergeLineBreaks() {
     return get<boolean>("formatter.mergeLineBreaks");

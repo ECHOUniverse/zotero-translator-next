@@ -53,6 +53,11 @@ pref-summary-model-hint = 留空 = 使用当前 LLM 渠道默认模型
 pref-summary-prompt = 总结提示词
 pref-summary-prompt-hint = 留空 = 默认结构化模板（研究问题/方法/主要发现/结论/局限）；{targetLang} 会被替换为实际语言名
 
+pref-display-title = 显示
+pref-display-markdown =
+    .label = 内容区 Markdown 渲染
+    .tooltiptext = 在侧栏与历史窗口中渲染标题、列表、粗体等简单 Markdown 语法
+
 pref-format-title = 格式化规则
 pref-fmt-merge =
     .label = 合并硬换行

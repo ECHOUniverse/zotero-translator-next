@@ -27,6 +27,10 @@ import {
   type CancelToken,
 } from "../utils/cancel";
 import { config } from "../../package.json";
+import {
+  renderContent,
+  finalizeMarkdownContent,
+} from "../utils/renderContent";
 
 // 窗口页面脚本运行在 chrome 文档上下文；tsconfig 无 DOM lib，这里显式声明
 // （esbuild 编译期仅按类型擦除处理，运行时由 Firefox 提供）
@@ -415,7 +419,7 @@ function historyItem(entry: HistoryEntry): {
   row.append(head);
 
   const preview = el("div", "ztr-history-preview");
-  preview.textContent = entry.translatedText;
+  renderContent(preview, entry.translatedText, { mode: "markdown" });
   row.append(preview);
 
   const toggle = el("button", "ztr-history-toggle");
@@ -496,6 +500,7 @@ async function runSummary(
     badge.textContent = str("ztr-status-success");
     badge.className = "ztr-badge ztr-badge-success";
     text.classList.remove("ztr-streaming");
+    finalizeMarkdownContent(text, result);
     cancelBtn.remove();
 
     const copyBtn = el("button", "ztr-btn");

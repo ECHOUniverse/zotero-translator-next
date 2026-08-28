@@ -30,6 +30,8 @@ export type FluentMessageId =
   | 'pref-deepseek-model-custom'
   | 'pref-deepseek-section'
   | 'pref-deepseek-status-loading'
+  | 'pref-display-markdown'
+  | 'pref-display-title'
   | 'pref-enable'
   | 'pref-fmt-dashes'
   | 'pref-fmt-hyphen'

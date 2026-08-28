@@ -53,6 +53,11 @@ pref-summary-model-hint = Leave empty to use the current LLM channel's default m
 pref-summary-prompt = Summary prompt
 pref-summary-prompt-hint = Leave empty for the default structured template (research question/method/findings/conclusions/limitations); {targetLang} is replaced with the actual language name
 
+pref-display-title = Display
+pref-display-markdown =
+    .label = Markdown rendering in content panes
+    .tooltiptext = Render headings, lists, bold, and other simple Markdown in the sidebar and history window
+
 pref-format-title = Formatting rules
 pref-fmt-merge =
     .label = Merge hard line breaks

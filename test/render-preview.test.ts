@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { config } from "../../package.json";
+import { renderContent } from "../src/utils/renderContent";
 
 /**
  * 布局回归：在真实区块 body 中构造与 renderHistoryList 完全同构的历史条目 DOM
@@ -39,26 +39,48 @@ describe("layout: history preview full-wrap (direct DOM)", function () {
     item.append(src);
     const preview = doc.createElement("div");
     preview.className = "ztr-history-preview";
-    preview.textContent = TRANSLATED_TEXT;
+    renderContent(preview, TRANSLATED_TEXT, { mode: "markdown" });
     item.append(preview);
     list.append(item);
     bucket.append(list);
     return { preview, item };
   }
 
+  function textNodeAtOffset(
+    root: Node,
+    offset: number,
+  ): { node: Text; offset: number } | null {
+    let current = 0;
+    const walker = root.ownerDocument!.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+    );
+    let node = walker.nextNode() as Text | null;
+    while (node) {
+      const len = node.length;
+      if (offset < current + len) {
+        return { node, offset: offset - current };
+      }
+      current += len;
+      node = walker.nextNode() as Text | null;
+    }
+    return null;
+  }
+
   function measure(preview: any) {
     const cs = getComputedStyle(preview);
-    const order: string[] = [];
-    const textNode: any = [...preview.childNodes].find(
-      (n: any) => n.nodeType === 3,
-    );
-    // 全文按 12 字符窗口采样矩形，找「无矩形」空洞
     const holes: string[] = [];
     const total = preview.textContent.length;
     for (let i = 0; i < total; i += 12) {
+      const start = textNodeAtOffset(preview, i);
+      const end = textNodeAtOffset(preview, Math.min(i + 12, total));
+      if (!start || !end) {
+        holes.push(`${i}..${Math.min(i + 12, total)}「missing-node」`);
+        continue;
+      }
       const r = preview.ownerDocument.createRange();
-      r.setStart(textNode, i);
-      r.setEnd(textNode, Math.min(i + 12, total));
+      r.setStart(start.node, start.offset);
+      r.setEnd(end.node, end.offset);
       const rects = Array.from(r.getClientRects() as any);
       if (!rects.some((x: any) => x.width > 0 && x.height > 0)) {
         holes.push(
@@ -78,9 +100,15 @@ describe("layout: history preview full-wrap (direct DOM)", function () {
     for (const a of anchors) {
       const i = preview.textContent.indexOf(a);
       if (i < 0) continue;
+      const start = textNodeAtOffset(preview, i);
+      const end = textNodeAtOffset(preview, i + a.length);
+      if (!start || !end) {
+        anchorInfo.push(`${a.slice(0, 10)}:MISSING(no-node)`);
+        continue;
+      }
       const r = preview.ownerDocument.createRange();
-      r.setStart(textNode, i);
-      r.setEnd(textNode, i + a.length);
+      r.setStart(start.node, start.offset);
+      r.setEnd(end.node, end.offset);
       const rects = Array.from(r.getClientRects() as any);
       const painted = rects.some((x: any) => x.width > 0 && x.height > 0);
       anchorInfo.push(

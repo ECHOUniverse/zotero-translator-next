@@ -174,11 +174,14 @@
 }
 
 .ztr-result-text {
-  white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;
   max-height: 320px;
   overflow-y: auto;
+}
+
+.ztr-result-text:not(.ztr-md) {
+  white-space: pre-wrap;
 }
 
 /* 所有内容区可手动选取文本（显式声明，防 Zotero 未来 CSS 改动） */
@@ -194,6 +197,59 @@
   content: "▌";
   animation: ztr-blink 1s step-start infinite;
   color: var(--accent-blue, #4072e5);
+}
+
+/* Markdown 渲染内容（.ztr-md 容器） */
+.ztr-md h1,
+.ztr-md h2,
+.ztr-md h3,
+.ztr-md h4,
+.ztr-md h5,
+.ztr-md h6 {
+  font-weight: 600;
+  margin: 6px 0 2px;
+  line-height: 1.35;
+}
+
+.ztr-md h1 {
+  font-size: 14px;
+}
+
+.ztr-md h2 {
+  font-size: 13px;
+}
+
+.ztr-md h3,
+.ztr-md h4,
+.ztr-md h5,
+.ztr-md h6 {
+  font-size: 12px;
+}
+
+.ztr-md p {
+  margin: 4px 0;
+}
+
+.ztr-md ul,
+.ztr-md ol {
+  margin: 2px 0;
+  padding-left: 1.2em;
+}
+
+.ztr-md li {
+  margin: 1px 0;
+}
+
+.ztr-md strong {
+  font-weight: 600;
+}
+
+.ztr-md em {
+  font-style: italic;
+}
+
+.ztr-history-preview:not(.ztr-md) {
+  white-space: pre-wrap;
 }
 
 @keyframes ztr-blink {
@@ -255,13 +311,16 @@
 }
 
 .ztr-compare-text {
-  white-space: pre-wrap;
   word-break: break-word;
   font-size: 12px;
   line-height: 1.5;
   background: var(--fill-quarternary, #f5f5f5);
   border-radius: 4px;
   padding: 4px 6px;
+}
+
+.ztr-compare-text:not(.ztr-md) {
+  white-space: pre-wrap;
 }
 
 /* 历史 */
@@ -304,7 +363,6 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--fill-primary, #333);
-  white-space: pre-wrap;
   word-break: break-word;
   margin-top: 2px;
   /* 长文本固定显示 3 行，超长由展开按钮控制。

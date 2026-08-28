@@ -43,6 +43,10 @@ import {
 } from "../modules/selection";
 import { headTail } from "../utils/truncate";
 import {
+  renderContent,
+  finalizeMarkdownContent,
+} from "../utils/renderContent";
+import {
   TARGET_LANGUAGES,
   TARGET_LANGUAGE_CODES,
 } from "../constants/languages";
@@ -506,11 +510,18 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   // 译文
   const text = el(doc, "div");
   text.className = "ztr-result-text";
-  text.textContent =
+  const resultText =
     task.status === "processing" && !task.translatedText
       ? getString("ztr-translating")
       : task.translatedText || "—";
-  if (task.status === "processing") text.classList.add("ztr-streaming");
+  if (task.status === "processing") {
+    text.classList.add("ztr-streaming");
+    renderContent(text, resultText, { mode: "plain" });
+  } else if (task.status === "success" && task.translatedText) {
+    renderContent(text, task.translatedText, { mode: "markdown" });
+  } else {
+    renderContent(text, resultText, { mode: "plain" });
+  }
   card.append(text);
 
   // 操作行
@@ -1042,7 +1053,7 @@ function historyItem(
   // 全文渲染，CSS 3 行截断（.ztr-history-preview）；超长时由调用方测量后显示展开按钮
   const preview = el(doc, "div");
   preview.className = "ztr-history-preview";
-  preview.textContent = entry.translatedText;
+  renderContent(preview, entry.translatedText, { mode: "markdown" });
   row.append(preview);
 
   const toggle = el(doc, "button");
@@ -1227,6 +1238,7 @@ async function runSummary(
     badge.textContent = getString("ztr-status-success");
     badge.className = "ztr-badge ztr-badge-success";
     text.classList.remove("ztr-streaming");
+    finalizeMarkdownContent(text, result);
     cancelBtn.remove();
     actions.append(
       // D5 操作区：复制 / 存入历史 / 写入笔记 / 重新生成
@@ -1393,7 +1405,7 @@ function compareHeading(doc: Document, label: string): HTMLDivElement {
 function compareText(doc: Document, text: string): HTMLDivElement {
   const div = el(doc, "div");
   div.className = "ztr-compare-text";
-  div.textContent = text;
+  renderContent(div, text, { mode: "markdown" });
   return div;
 }
 

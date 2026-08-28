@@ -34,6 +34,7 @@ declare namespace _ZoteroTypes {
       "summary.lang": string;
       "summary.model": string;
       "summary.prompt": string;
+      "display.markdown": boolean;
       "formatter.mergeLineBreaks": boolean;
       "formatter.fixHyphenation": boolean;
       "formatter.normalizeQuotes": boolean;
