@@ -247,9 +247,7 @@ function initLangSelectUI(
   clearMenupopup(popup);
   for (const code of known) {
     const label =
-      code === "auto" && autoLabel
-        ? autoLabel
-        : (languageLabel(code) ?? code);
+      code === "auto" && autoLabel ? autoLabel : (languageLabel(code) ?? code);
     popup.append(createMenuItem(doc, code, label));
   }
   popup.append(

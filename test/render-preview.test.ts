@@ -67,26 +67,35 @@ describe("layout: history preview full-wrap (direct DOM)", function () {
     return null;
   }
 
+  /** 单文本节点内取样，避免跨 <p> 等块级边界时 Range 无矩形（Markdown 多段 DOM） */
+  function rectsPainted(node: Text, start: number, end: number, doc: Document) {
+    const r = doc.createRange();
+    r.setStart(node, start);
+    r.setEnd(node, end);
+    return Array.from(r.getClientRects() as DOMRectList).some(
+      (x) => x.width > 0 && x.height > 0,
+    );
+  }
+
   function measure(preview: any) {
     const cs = getComputedStyle(preview);
+    const doc = preview.ownerDocument as Document;
     const holes: string[] = [];
-    const total = preview.textContent.length;
-    for (let i = 0; i < total; i += 12) {
-      const start = textNodeAtOffset(preview, i);
-      const end = textNodeAtOffset(preview, Math.min(i + 12, total));
-      if (!start || !end) {
-        holes.push(`${i}..${Math.min(i + 12, total)}「missing-node」`);
-        continue;
+    const walker = doc.createTreeWalker(preview, NodeFilter.SHOW_TEXT);
+    let globalOffset = 0;
+    let textNode = walker.nextNode() as Text | null;
+    while (textNode) {
+      const len = textNode.length;
+      for (let i = 0; i < len; i += 12) {
+        const end = Math.min(i + 12, len);
+        if (!rectsPainted(textNode, i, end, doc)) {
+          holes.push(
+            `${globalOffset + i}..${globalOffset + end}「${textNode.data.slice(i, i + 8)}」`,
+          );
+        }
       }
-      const r = preview.ownerDocument.createRange();
-      r.setStart(start.node, start.offset);
-      r.setEnd(end.node, end.offset);
-      const rects = Array.from(r.getClientRects() as any);
-      if (!rects.some((x: any) => x.width > 0 && x.height > 0)) {
-        holes.push(
-          `${i}..${Math.min(i + 12, total)}「${preview.textContent.slice(i, i + 8)}」`,
-        );
-      }
+      globalOffset += len;
+      textNode = walker.nextNode() as Text | null;
     }
     // 几个关键锚点
     const anchors = [

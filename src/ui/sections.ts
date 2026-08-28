@@ -42,10 +42,7 @@ import {
   type SelectionRegion,
 } from "../modules/selection";
 import { headTail } from "../utils/truncate";
-import {
-  renderContent,
-  finalizeMarkdownContent,
-} from "../utils/renderContent";
+import { renderContent, finalizeMarkdownContent } from "../utils/renderContent";
 import {
   TARGET_LANGUAGES,
   TARGET_LANGUAGE_CODES,

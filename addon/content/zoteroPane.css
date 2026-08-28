@@ -621,7 +621,9 @@ body.ztr-history-window[data-color-scheme="dark"] .ztr-empty {
 }
 
 :root[data-color-scheme="dark"] .ztr-section-title-row .ztr-icon-btn:hover,
-body.ztr-history-window[data-color-scheme="dark"] .ztr-section-title-row .ztr-icon-btn:hover {
+body.ztr-history-window[data-color-scheme="dark"]
+  .ztr-section-title-row
+  .ztr-icon-btn:hover {
   background: #3a3a3f;
 }
 

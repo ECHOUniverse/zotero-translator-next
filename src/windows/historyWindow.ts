@@ -27,10 +27,7 @@ import {
   type CancelToken,
 } from "../utils/cancel";
 import { config } from "../../package.json";
-import {
-  renderContent,
-  finalizeMarkdownContent,
-} from "../utils/renderContent";
+import { renderContent, finalizeMarkdownContent } from "../utils/renderContent";
 
 // 窗口页面脚本运行在 chrome 文档上下文；tsconfig 无 DOM lib，这里显式声明
 // （esbuild 编译期仅按类型擦除处理，运行时由 Firefox 提供）
