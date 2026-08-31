@@ -49,6 +49,14 @@ export class ChannelRegistry {
     });
   }
 
+  /**
+   * 覆盖/注入渠道实例（测试用 stub；生产设置变更请用 invalidate）。
+   * 写入后 get(id) 直接返回该实例，不再走内置工厂。
+   */
+  register(svc: TranslateService): void {
+    this.services.set(svc.id, svc);
+  }
+
   /** 按 id 获取渠道实例（不存在时尝试构建） */
   get(id: string): TranslateService | null {
     const cached = this.services.get(id);

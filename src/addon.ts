@@ -6,6 +6,7 @@ import { SummaryManager } from "./modules/summary";
 import { ReaderModule } from "./modules/reader";
 import { ItemPaneModule } from "./modules/itemPane";
 import { SelectionManager } from "./modules/selection";
+import { channelRegistry, type ChannelRegistry } from "./services";
 import { summarizeTaskIn } from "./ui/sections";
 
 class Addon {
@@ -28,6 +29,8 @@ class Addon {
     itemPane: ItemPaneModule;
     /** 跨区域选区（多选拼段翻译） */
     selection: SelectionManager;
+    /** 渠道注册表（测试可 register stub，避免打真网络） */
+    channelRegistry: ChannelRegistry;
   };
   public hooks: typeof hooks;
   public api: object;
@@ -53,6 +56,7 @@ class Addon {
       }),
       itemPane: new ItemPaneModule(translate),
       selection,
+      channelRegistry,
     };
     this.hooks = hooks;
     this.api = {};

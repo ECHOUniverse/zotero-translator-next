@@ -169,67 +169,95 @@ describe("reader selection translate", function () {
     // 6. 模拟弹层按钮/快捷键入口：设置最近划选文本，调用 translateSelection()。
     //    该入口内部会把附件 itemID 归一化为父条目 id（logicalItemID）。
     const instance: any = (Zotero as any)[config.addonInstance];
-    // 随机文本避免跨运行缓存命中（缓存命中不落库，且任务瞬态结束）
-    const sourceText =
-      "Hello world, this is a translation pipeline test. " + Date.now();
-    const rm: any = instance.data.reader;
-    rm.lastSelectionText = sourceText;
-    const seenTasks: any[] = [];
-    const unsub = instance.data.translate.subscribe((t: any) =>
-      seenTasks.push(t),
-    );
-    await rm.translateSelection();
-    unsub();
+    // stub 渠道：覆盖默认 mymemory，避免 CI/本地打真网络（429 误报）。
+    // 必须走插件实例上的同一份 registry（esbuild 打包后与 test import 不是同一单例）。
+    const registry = instance.data.channelRegistry;
+    registry.register({
+      id: "mymemory",
+      name: "Stub",
+      kind: "rule",
+      supportsStreaming: false,
+      isConfigured: () => true,
+      async translate(
+        task: { sourceText: string },
+        onChunk?: (chunk: {
+          index: number;
+          total: number;
+          text: string;
+        }) => void,
+      ) {
+        const text = `[stub] ${task.sourceText}`;
+        onChunk?.({ index: 0, total: 1, text });
+        return { text };
+      },
+    });
 
-    // 7. 等待任务成功，侧栏结果卡片出现译文
-    const deadline3 = Date.now() + 45000;
-    let task: any = null;
-    let cardText = "";
-    while (Date.now() < deadline3) {
-      task = seenTasks.find((t) => t.status !== "cancelled") ?? null;
-      const textEl = readerSection(win)?.querySelector(
-        ".ztr-result .ztr-result-text",
-      );
-      if (textEl) cardText = (textEl as HTMLElement).textContent ?? "";
-      if (task && ["success", "fail"].includes(task.status)) break;
-      await new Promise((r) => setTimeout(r, 500));
-    }
-    assert.ok(task, "应创建翻译任务");
-    assert.equal(
-      task.status,
-      "success",
-      `任务应成功; error=${task.error ?? ""} source="${task.sourceText}"`,
-    );
-    assert.ok(task.translatedText.trim().length > 0, "译文不应为空");
-    assert.ok(
-      cardText.length > 0 && !cardText.includes("在 PDF 中划选"),
-      `侧栏结果卡片应显示译文而非空态; cardText=${JSON.stringify(
-        cardText.slice(0, 60),
-      )}`,
-    );
-
-    // 8. 回归断言：任务 itemID 必须是父条目（与区块 ctx.itemID 一致）
-    const parentID = (Zotero.Items.get(attachment.id) as any)?.parentID;
-    assert.ok(parentID != null, "附件应有父条目（测试 PDF 挂载于 parent 下）");
-    assert.equal(
-      task.itemID,
-      parentID,
-      `任务应关联父条目而非附件; task.itemID=${task.itemID} parentID=${parentID}`,
-    );
-
-    // 9. 历史落库验证：按父条目查询应命中（阅读器翻译关联文章）
-    const { getHistoryByItem } = await import("../src/modules/history");
-    const parentHistory = await getHistoryByItem(parentID, 10);
-    assert.ok(
-      parentHistory.some((h) => h.sourceText === sourceText),
-      "按父条目查询历史应命中",
-    );
-
-    // 清理：关闭阅读器 tab
     try {
-      win.Zotero_Tabs?.closeTab?.(reader.tabID);
-    } catch {
-      // 忽略（测试环境不稳定的 UI 辅助操作）
+      // 随机文本避免跨运行缓存命中（缓存命中不落库，且任务瞬态结束）
+      const sourceText =
+        "Hello world, this is a translation pipeline test. " + Date.now();
+      const rm: any = instance.data.reader;
+      rm.lastSelectionText = sourceText;
+      const seenTasks: any[] = [];
+      const unsub = instance.data.translate.subscribe((t: any) =>
+        seenTasks.push(t),
+      );
+      await rm.translateSelection();
+      unsub();
+
+      // 7. 等待任务成功，侧栏结果卡片出现译文
+      const deadline3 = Date.now() + 45000;
+      let task: any = null;
+      let cardText = "";
+      while (Date.now() < deadline3) {
+        task = seenTasks.find((t) => t.status !== "cancelled") ?? null;
+        const textEl = readerSection(win)?.querySelector(
+          ".ztr-result .ztr-result-text",
+        );
+        if (textEl) cardText = (textEl as HTMLElement).textContent ?? "";
+        if (task && ["success", "fail"].includes(task.status)) break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      assert.ok(task, "应创建翻译任务");
+      assert.equal(
+        task.status,
+        "success",
+        `任务应成功; error=${task.error ?? ""} source="${task.sourceText}"`,
+      );
+      assert.ok(task.translatedText.trim().length > 0, "译文不应为空");
+      assert.ok(
+        cardText.length > 0 && !cardText.includes("在 PDF 中划选"),
+        `侧栏结果卡片应显示译文而非空态; cardText=${JSON.stringify(
+          cardText.slice(0, 60),
+        )}`,
+      );
+
+      // 8. 回归断言：任务 itemID 必须是父条目（与区块 ctx.itemID 一致）
+      const parentID = (Zotero.Items.get(attachment.id) as any)?.parentID;
+      assert.ok(
+        parentID != null,
+        "附件应有父条目（测试 PDF 挂载于 parent 下）",
+      );
+      assert.equal(
+        task.itemID,
+        parentID,
+        `任务应关联父条目而非附件; task.itemID=${task.itemID} parentID=${parentID}`,
+      );
+
+      // 9. 历史落库验证：按父条目查询应命中（阅读器翻译关联文章）
+      const { getHistoryByItem } = await import("../src/modules/history");
+      const parentHistory = await getHistoryByItem(parentID, 10);
+      assert.ok(
+        parentHistory.some((h) => h.sourceText === sourceText),
+        "按父条目查询历史应命中",
+      );
+    } finally {
+      registry.invalidate("mymemory");
+      try {
+        win.Zotero_Tabs?.closeTab?.(reader.tabID);
+      } catch {
+        // 忽略（测试环境不稳定的 UI 辅助操作）
+      }
     }
   });
 });

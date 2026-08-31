@@ -8,30 +8,33 @@ on:
     branches:
       - main
 
-jobs:
-  # 纯 Node 单测（不依赖 Zotero 环境/网络，秒级完成，快速反馈）
-  unit:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup JS
-        uses: zotero-plugin-dev/workflows/setup-js@main
-      - name: Run Unit Tests
-        run: npm run test:unit
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
-  lint:
+permissions:
+  contents: read
+
+jobs:
+  # lint + 纯 Node 单测（不依赖 Zotero/网络，一次 setup）
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
-      GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
       - name: Run Lint
         run: npm run lint:check
+      - name: Run Unit Tests
+        run: npm run test:unit
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
-      GITHUB_TOKEN: ${{ secrets.GitHub_TOKEN }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
@@ -51,10 +54,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs:
-      - build
+    timeout-minutes: 15
     env:
-      # CI 上跳过真实网络翻译用例（MyMemory 不稳定，避免 flaky 失败）
+      # startup 里 MyMemory 真网络用例在 CI skip；阅读器回归走 stub 渠道
       CI: "true"
     steps:
       - name: Setup JS

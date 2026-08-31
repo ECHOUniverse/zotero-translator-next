@@ -29,7 +29,8 @@
     "test": "zotero-plugin test",
     "icons:export": "node scripts/icon-gen.mjs --all",
     "update-deps": "npm update --save",
-    "test:unit": "mocha --require tsx 'test/unit/**/*.test.ts'"
+    "test:unit": "mocha --require tsx 'test/unit/**/*.test.ts'",
+    "prepare": "husky"
   },
   "dependencies": {
     "zotero-plugin-toolkit": "^5.2.0"
@@ -42,6 +43,8 @@
     "@zotero-plugin/eslint-config": "^0.6.7",
     "chai": "^6.2.1",
     "eslint": "^9.39.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
     "mocha": "^11.7.5",
     "prettier": "^3.7.4",
     "sharp": "^0.35.3",
