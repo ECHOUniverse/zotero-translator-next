@@ -1,7 +1,15 @@
 # ZoteroTranslatorNext preferences strings
 
 pref-title = ZoteroTranslatorNext
-pref-general-title = General
+pref-tab-general =
+    .label = General
+pref-tab-translate =
+    .label = Translation
+pref-tab-channels =
+    .label = Channels
+pref-tab-summary =
+    .label = Summary
+pref-translate-title = Language & behavior
 pref-enable =
     .label = Enable plugin
 pref-target-lang = Target language

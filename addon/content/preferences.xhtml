@@ -6,292 +6,324 @@
   class="ztr-prefs-root"
   onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
 >
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-general-title"></html:h2></label>
-    <checkbox
-      id="ztr-enable"
-      preference="enable"
-      data-l10n-id="pref-enable"
-      native="true"
-    />
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-target-lang"></html:label>
-      <html:div class="ztr-prefs-control">
-        <menulist id="ztr-target-lang" native="true">
-          <menupopup />
-        </menulist>
-        <html:input
-          type="text"
-          id="ztr-target-lang-custom"
-          preference="targetLang"
-          hidden="true"
+  <tabbox id="ztr-prefs-tabbox">
+    <tabs>
+      <tab data-l10n-id="pref-tab-general" />
+      <tab data-l10n-id="pref-tab-translate" />
+      <tab data-l10n-id="pref-tab-channels" />
+      <tab data-l10n-id="pref-tab-summary" />
+    </tabs>
+    <tabpanels>
+      <tabpanel orient="vertical">
+        <checkbox
+          id="ztr-enable"
+          preference="enable"
+          data-l10n-id="pref-enable"
+          native="true"
         />
-      </html:div>
-    </html:div>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-source-lang"></html:label>
-      <html:div class="ztr-prefs-control">
-        <menulist id="ztr-source-lang" native="true">
-          <menupopup />
-        </menulist>
-        <html:input
-          type="text"
-          id="ztr-source-lang-custom"
-          preference="sourceLang"
-          hidden="true"
-        />
-      </html:div>
-    </html:div>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-timeout"></html:label>
-      <html:input type="number" preference="translate.timeout" />
-    </html:div>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-chunk-size"></html:label>
-      <html:input type="number" preference="translate.chunkMaxChars" />
-    </html:div>
-    <checkbox
-      preference="translate.autoOnSelect"
-      data-l10n-id="pref-auto-on-select"
-      native="true"
-    />
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-auto-debounce"></html:label>
-      <html:input type="number" preference="translate.autoDebounceMs" />
-    </html:div>
-    <checkbox
-      preference="translate.contextAware"
-      data-l10n-id="pref-context-aware"
-      native="true"
-    />
-  </groupbox>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-channels-title"></html:h2></label>
-    <html:div id="ztr-channel-order" class="ztr-prefs-list" />
-    <html:div
-      class="ztr-prefs-hint"
-      data-l10n-id="pref-channels-order-hint"
-    ></html:div>
-
-    <html:div id="ztr-bing-config" class="ztr-prefs-subsection">
-      <html:div
-        class="ztr-prefs-subsection-title"
-        data-l10n-id="pref-bing-section"
-      ></html:div>
-      <html:div class="ztr-prefs-field">
-        <html:label data-l10n-id="pref-azure-key"></html:label>
-        <html:input type="password" preference="bing.azureKey" />
-      </html:div>
-      <html:div class="ztr-prefs-field">
-        <html:label data-l10n-id="pref-azure-region"></html:label>
-        <html:input type="text" preference="bing.azureRegion" />
-      </html:div>
-    </html:div>
-
-    <html:div id="ztr-deepseek-config" class="ztr-prefs-subsection">
-      <html:div
-        class="ztr-prefs-subsection-title"
-        data-l10n-id="pref-deepseek-section"
-      ></html:div>
-      <html:div class="ztr-prefs-field">
-        <html:label data-l10n-id="pref-deepseek-key"></html:label>
-        <html:input
-          type="password"
-          id="ztr-deepseek-key"
-          preference="deepseek.apiKey"
-        />
-      </html:div>
-      <html:div class="ztr-prefs-field">
-        <html:label data-l10n-id="pref-deepseek-baseurl"></html:label>
-        <html:input
-          type="text"
-          id="ztr-deepseek-baseurl"
-          preference="deepseek.baseURL"
-        />
-      </html:div>
-      <html:div
-        class="ztr-prefs-hint"
-        data-l10n-id="pref-deepseek-baseurl-hint"
-      ></html:div>
-      <html:div class="ztr-prefs-field">
-        <html:label data-l10n-id="pref-deepseek-model"></html:label>
-        <html:div class="ztr-prefs-control">
-          <menulist id="ztr-deepseek-model-select" native="true">
-            <menupopup />
-          </menulist>
-          <html:input
-            type="text"
-            id="ztr-deepseek-model-custom"
-            preference="deepseek.model"
-            hidden="true"
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-display-title"></html:h2></label>
+          <checkbox
+            preference="display.markdown"
+            data-l10n-id="pref-display-markdown"
+            native="true"
           />
-        </html:div>
-      </html:div>
-      <html:div
-        id="ztr-deepseek-legacy-hint"
-        class="ztr-prefs-hint ztr-prefs-warn"
-        hidden="true"
-      ></html:div>
-      <html:div class="ztr-prefs-actions">
-        <html:button
-          id="ztr-deepseek-fetch-models"
-          class="small-button"
-          data-l10n-id="pref-deepseek-fetch-models"
-        />
-        <html:button
-          id="ztr-deepseek-fetch-balance"
-          class="small-button"
-          data-l10n-id="pref-deepseek-fetch-balance"
-        />
-      </html:div>
-      <html:div id="ztr-deepseek-status" class="ztr-prefs-hint"></html:div>
-      <html:div
-        id="ztr-deepseek-balance"
-        class="ztr-prefs-balance"
-        hidden="true"
-      ></html:div>
-    </html:div>
-  </groupbox>
+        </groupbox>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-custom-channels-title"></html:h2></label>
-    <html:div id="ztr-custom-channels" class="ztr-prefs-list" />
-    <html:div class="ztr-prefs-custom-form">
-      <html:input type="text" id="ztr-custom-name" placeholder="Name" />
-      <html:input
-        type="text"
-        id="ztr-custom-baseurl"
-        placeholder="https://api.example.com/v1"
-      />
-      <html:input type="password" id="ztr-custom-key" placeholder="API Key" />
-      <html:input type="text" id="ztr-custom-model" placeholder="model" />
-      <html:button
-        id="ztr-add-channel"
-        class="small-button"
-        data-l10n-id="pref-add-channel"
-      />
-    </html:div>
-    <html:div
-      class="ztr-prefs-hint"
-      data-l10n-id="pref-privacy-hint"
-    ></html:div>
-  </groupbox>
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-shortcuts-title"></html:h2></label>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-shortcut-translate"></html:label>
+            <html:input
+              type="text"
+              id="ztr-shortcut-translate"
+              readonly="true"
+            />
+          </html:div>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-shortcut-summary"></html:label>
+            <html:input type="text" id="ztr-shortcut-summary" readonly="true" />
+          </html:div>
+        </groupbox>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-summary-title"></html:h2></label>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-summary-lang"></html:label>
-      <html:div class="ztr-prefs-control">
-        <menulist id="ztr-summary-lang" native="true">
-          <menupopup />
-        </menulist>
-        <html:input
-          type="text"
-          id="ztr-summary-lang-custom"
-          preference="summary.lang"
-          placeholder="fr"
-          hidden="true"
-        />
-      </html:div>
-    </html:div>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-summary-model"></html:label>
-      <html:input type="text" preference="summary.model" />
-    </html:div>
-    <html:div
-      class="ztr-prefs-hint"
-      data-l10n-id="pref-summary-model-hint"
-    ></html:div>
-    <html:div class="ztr-prefs-field ztr-prefs-field-block">
-      <html:label data-l10n-id="pref-summary-prompt"></html:label>
-      <html:textarea
-        id="ztr-summary-prompt"
-        preference="summary.prompt"
-        rows="6"
-      />
-    </html:div>
-    <html:div
-      class="ztr-prefs-hint"
-      data-l10n-id="pref-summary-prompt-hint"
-    ></html:div>
-  </groupbox>
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-history-title"></html:h2></label>
+          <checkbox
+            preference="cacheEnabled"
+            data-l10n-id="pref-cache-enabled"
+            native="true"
+          />
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-history-capacity"></html:label>
+            <html:input type="number" preference="historyCapacity" />
+          </html:div>
+          <html:button
+            id="ztr-clear-history"
+            class="danger-button"
+            data-l10n-id="pref-clear-history"
+          />
+        </groupbox>
+      </tabpanel>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-display-title"></html:h2></label>
-    <checkbox
-      preference="display.markdown"
-      data-l10n-id="pref-display-markdown"
-      native="true"
-    />
-  </groupbox>
+      <tabpanel orient="vertical">
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-translate-title"></html:h2></label>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-target-lang"></html:label>
+            <html:div class="ztr-prefs-control">
+              <menulist id="ztr-target-lang" native="true">
+                <menupopup />
+              </menulist>
+              <html:input
+                type="text"
+                id="ztr-target-lang-custom"
+                preference="targetLang"
+                hidden="true"
+              />
+            </html:div>
+          </html:div>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-source-lang"></html:label>
+            <html:div class="ztr-prefs-control">
+              <menulist id="ztr-source-lang" native="true">
+                <menupopup />
+              </menulist>
+              <html:input
+                type="text"
+                id="ztr-source-lang-custom"
+                preference="sourceLang"
+                hidden="true"
+              />
+            </html:div>
+          </html:div>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-timeout"></html:label>
+            <html:input type="number" preference="translate.timeout" />
+          </html:div>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-chunk-size"></html:label>
+            <html:input type="number" preference="translate.chunkMaxChars" />
+          </html:div>
+          <checkbox
+            preference="translate.autoOnSelect"
+            data-l10n-id="pref-auto-on-select"
+            native="true"
+          />
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-auto-debounce"></html:label>
+            <html:input type="number" preference="translate.autoDebounceMs" />
+          </html:div>
+          <checkbox
+            preference="translate.contextAware"
+            data-l10n-id="pref-context-aware"
+            native="true"
+          />
+        </groupbox>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-shortcuts-title"></html:h2></label>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-shortcut-translate"></html:label>
-      <html:input type="text" id="ztr-shortcut-translate" readonly="true" />
-    </html:div>
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-shortcut-summary"></html:label>
-      <html:input type="text" id="ztr-shortcut-summary" readonly="true" />
-    </html:div>
-  </groupbox>
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-format-title"></html:h2></label>
+          <checkbox
+            preference="formatter.mergeLineBreaks"
+            data-l10n-id="pref-fmt-merge"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.fixHyphenation"
+            data-l10n-id="pref-fmt-hyphen"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.normalizeQuotes"
+            data-l10n-id="pref-fmt-quotes"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.normalizeDashes"
+            data-l10n-id="pref-fmt-dashes"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.normalizeWidth"
+            data-l10n-id="pref-fmt-width"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.collapseWhitespace"
+            data-l10n-id="pref-fmt-space"
+            native="true"
+          />
+          <checkbox
+            preference="formatter.normalizeSymbols"
+            data-l10n-id="pref-fmt-symbols"
+            native="true"
+          />
+        </groupbox>
+      </tabpanel>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-format-title"></html:h2></label>
-    <checkbox
-      preference="formatter.mergeLineBreaks"
-      data-l10n-id="pref-fmt-merge"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.fixHyphenation"
-      data-l10n-id="pref-fmt-hyphen"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.normalizeQuotes"
-      data-l10n-id="pref-fmt-quotes"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.normalizeDashes"
-      data-l10n-id="pref-fmt-dashes"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.normalizeWidth"
-      data-l10n-id="pref-fmt-width"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.collapseWhitespace"
-      data-l10n-id="pref-fmt-space"
-      native="true"
-    />
-    <checkbox
-      preference="formatter.normalizeSymbols"
-      data-l10n-id="pref-fmt-symbols"
-      native="true"
-    />
-  </groupbox>
+      <tabpanel orient="vertical">
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-channels-title"></html:h2></label>
+          <html:div id="ztr-channel-order" class="ztr-prefs-list" />
+          <html:div
+            class="ztr-prefs-hint"
+            data-l10n-id="pref-channels-order-hint"
+          ></html:div>
 
-  <groupbox>
-    <label><html:h2 data-l10n-id="pref-history-title"></html:h2></label>
-    <checkbox
-      preference="cacheEnabled"
-      data-l10n-id="pref-cache-enabled"
-      native="true"
-    />
-    <html:div class="ztr-prefs-field">
-      <html:label data-l10n-id="pref-history-capacity"></html:label>
-      <html:input type="number" preference="historyCapacity" />
-    </html:div>
-    <html:button
-      id="ztr-clear-history"
-      class="danger-button"
-      data-l10n-id="pref-clear-history"
-    />
-  </groupbox>
+          <html:div id="ztr-bing-config" class="ztr-prefs-subsection">
+            <html:div
+              class="ztr-prefs-subsection-title"
+              data-l10n-id="pref-bing-section"
+            ></html:div>
+            <html:div class="ztr-prefs-field">
+              <html:label data-l10n-id="pref-azure-key"></html:label>
+              <html:input type="password" preference="bing.azureKey" />
+            </html:div>
+            <html:div class="ztr-prefs-field">
+              <html:label data-l10n-id="pref-azure-region"></html:label>
+              <html:input type="text" preference="bing.azureRegion" />
+            </html:div>
+          </html:div>
+
+          <html:div id="ztr-deepseek-config" class="ztr-prefs-subsection">
+            <html:div
+              class="ztr-prefs-subsection-title"
+              data-l10n-id="pref-deepseek-section"
+            ></html:div>
+            <html:div class="ztr-prefs-field">
+              <html:label data-l10n-id="pref-deepseek-key"></html:label>
+              <html:input
+                type="password"
+                id="ztr-deepseek-key"
+                preference="deepseek.apiKey"
+              />
+            </html:div>
+            <html:div class="ztr-prefs-field">
+              <html:label data-l10n-id="pref-deepseek-baseurl"></html:label>
+              <html:input
+                type="text"
+                id="ztr-deepseek-baseurl"
+                preference="deepseek.baseURL"
+              />
+            </html:div>
+            <html:div
+              class="ztr-prefs-hint"
+              data-l10n-id="pref-deepseek-baseurl-hint"
+            ></html:div>
+            <html:div class="ztr-prefs-field">
+              <html:label data-l10n-id="pref-deepseek-model"></html:label>
+              <html:div class="ztr-prefs-control">
+                <menulist id="ztr-deepseek-model-select" native="true">
+                  <menupopup />
+                </menulist>
+                <html:input
+                  type="text"
+                  id="ztr-deepseek-model-custom"
+                  preference="deepseek.model"
+                  hidden="true"
+                />
+              </html:div>
+            </html:div>
+            <html:div
+              id="ztr-deepseek-legacy-hint"
+              class="ztr-prefs-hint ztr-prefs-warn"
+              hidden="true"
+            ></html:div>
+            <html:div class="ztr-prefs-actions">
+              <html:button
+                id="ztr-deepseek-fetch-models"
+                class="small-button"
+                data-l10n-id="pref-deepseek-fetch-models"
+              />
+              <html:button
+                id="ztr-deepseek-fetch-balance"
+                class="small-button"
+                data-l10n-id="pref-deepseek-fetch-balance"
+              />
+            </html:div>
+            <html:div
+              id="ztr-deepseek-status"
+              class="ztr-prefs-hint"
+            ></html:div>
+            <html:div
+              id="ztr-deepseek-balance"
+              class="ztr-prefs-balance"
+              hidden="true"
+            ></html:div>
+          </html:div>
+        </groupbox>
+
+        <groupbox>
+          <label
+            ><html:h2 data-l10n-id="pref-custom-channels-title"></html:h2
+          ></label>
+          <html:div id="ztr-custom-channels" class="ztr-prefs-list" />
+          <html:div class="ztr-prefs-custom-form">
+            <html:input type="text" id="ztr-custom-name" placeholder="Name" />
+            <html:input
+              type="text"
+              id="ztr-custom-baseurl"
+              placeholder="https://api.example.com/v1"
+            />
+            <html:input
+              type="password"
+              id="ztr-custom-key"
+              placeholder="API Key"
+            />
+            <html:input type="text" id="ztr-custom-model" placeholder="model" />
+            <html:button
+              id="ztr-add-channel"
+              class="small-button"
+              data-l10n-id="pref-add-channel"
+            />
+          </html:div>
+          <html:div
+            class="ztr-prefs-hint"
+            data-l10n-id="pref-privacy-hint"
+          ></html:div>
+        </groupbox>
+      </tabpanel>
+
+      <tabpanel orient="vertical">
+        <groupbox>
+          <label><html:h2 data-l10n-id="pref-summary-title"></html:h2></label>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-summary-lang"></html:label>
+            <html:div class="ztr-prefs-control">
+              <menulist id="ztr-summary-lang" native="true">
+                <menupopup />
+              </menulist>
+              <html:input
+                type="text"
+                id="ztr-summary-lang-custom"
+                preference="summary.lang"
+                placeholder="fr"
+                hidden="true"
+              />
+            </html:div>
+          </html:div>
+          <html:div class="ztr-prefs-field">
+            <html:label data-l10n-id="pref-summary-model"></html:label>
+            <html:input type="text" preference="summary.model" />
+          </html:div>
+          <html:div
+            class="ztr-prefs-hint"
+            data-l10n-id="pref-summary-model-hint"
+          ></html:div>
+          <html:div class="ztr-prefs-field ztr-prefs-field-block">
+            <html:label data-l10n-id="pref-summary-prompt"></html:label>
+            <html:textarea
+              id="ztr-summary-prompt"
+              preference="summary.prompt"
+              rows="6"
+            />
+          </html:div>
+          <html:div
+            class="ztr-prefs-hint"
+            data-l10n-id="pref-summary-prompt-hint"
+          ></html:div>
+        </groupbox>
+      </tabpanel>
+    </tabpanels>
+  </tabbox>
 </vbox>

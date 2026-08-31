@@ -2,7 +2,15 @@
 
 #ztr-prefs-root,
 .ztr-prefs-root {
-  max-width: 44em;
+  max-width: 48em;
+}
+
+#ztr-prefs-tabbox {
+  width: 100%;
+}
+
+#ztr-prefs-tabbox > tabpanels {
+  padding: 8px 0 0;
 }
 
 .ztr-prefs-field {

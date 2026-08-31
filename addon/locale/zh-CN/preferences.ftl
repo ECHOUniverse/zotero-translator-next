@@ -1,7 +1,15 @@
 # ZoteroTranslatorNext preferences strings
 
 pref-title = ZoteroTranslatorNext
-pref-general-title = 常规
+pref-tab-general =
+    .label = 通用
+pref-tab-translate =
+    .label = 翻译
+pref-tab-channels =
+    .label = 渠道
+pref-tab-summary =
+    .label = 总结
+pref-translate-title = 语言与行为
 pref-enable =
     .label = 启用插件
 pref-target-lang = 目标语言
