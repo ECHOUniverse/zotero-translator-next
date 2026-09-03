@@ -75,10 +75,6 @@ ztr-summary-no-llm = 总结功能需要配置 DeepSeek 或自定义 OpenAI 渠�
 ztr-open-settings = 打开设置
 ztr-no-translated = 暂无已翻译内容
 
-# 右键菜单
-ztr-menuitem-translate-abstract =
-    .label = 翻译条目摘要
-
 # 其他
 ztr-no-text = 该条目没有可翻译的标题或摘要
 

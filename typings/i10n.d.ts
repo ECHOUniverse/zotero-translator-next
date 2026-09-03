@@ -88,7 +88,6 @@ export type FluentMessageId =
   | 'ztr-expand'
   | 'ztr-formatted'
   | 'ztr-history-window-title'
-  | 'ztr-menuitem-translate-abstract'
   | 'ztr-no-item-selected'
   | 'ztr-no-note-item'
   | 'ztr-no-text'

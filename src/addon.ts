@@ -4,7 +4,6 @@ import { createZToolkit } from "./utils/ztoolkit";
 import { TranslateManager } from "./modules/tasks";
 import { SummaryManager } from "./modules/summary";
 import { ReaderModule } from "./modules/reader";
-import { ItemPaneModule } from "./modules/itemPane";
 import { SelectionManager } from "./modules/selection";
 import { channelRegistry, type ChannelRegistry } from "./services";
 import { summarizeTaskIn } from "./ui/sections";
@@ -25,8 +24,6 @@ class Addon {
     summary: SummaryManager;
     /** 阅读器输入源 */
     reader: ReaderModule;
-    /** 条目面板输入源 */
-    itemPane: ItemPaneModule;
     /** 跨区域选区（多选拼段翻译） */
     selection: SelectionManager;
     /** 渠道注册表（测试可 register stub，避免打真网络） */
@@ -54,7 +51,6 @@ class Addon {
         },
         selection,
       }),
-      itemPane: new ItemPaneModule(translate),
       selection,
       channelRegistry,
     };

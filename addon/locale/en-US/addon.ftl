@@ -75,10 +75,6 @@ ztr-summary-no-llm = Summarization requires a DeepSeek or custom OpenAI channel.
 ztr-open-settings = Open Settings
 ztr-no-translated = No translated content yet
 
-# Context menu
-ztr-menuitem-translate-abstract =
-    .label = Translate item abstract
-
 # Misc
 ztr-no-text = This item has no title or abstract to translate
 

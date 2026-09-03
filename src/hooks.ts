@@ -6,7 +6,6 @@ import { registerPreferencePane, initPrefsWindow } from "./modules/settings";
 import type { TranslateManager } from "./modules/tasks";
 import type { SummaryManager } from "./modules/summary";
 import type { ReaderModule } from "./modules/reader";
-import type { ItemPaneModule } from "./modules/itemPane";
 
 async function onStartup() {
   await Promise.all([
@@ -24,7 +23,7 @@ async function onStartup() {
   await registerPreferencePane();
 
   // 区块（阅读器侧栏 + 条目面板 + 跨区域选区）
-  const { translate, summary, reader, itemPane, selection } = addon.data;
+  const { translate, summary, reader, selection } = addon.data;
   const { readerPaneID, itemPaneID } = registerSections(
     translate,
     summary,
@@ -34,7 +33,6 @@ async function onStartup() {
 
   // 阅读器划选弹层 + 快捷键
   reader.registerSelectionPopup();
-  itemPane.registerContextMenu();
 
   // 主窗口（可能已打开）
   for (const win of Zotero.getMainWindows()) {
