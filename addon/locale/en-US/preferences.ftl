@@ -26,7 +26,10 @@ pref-context-aware =
 
 pref-channels-title = Channels & fallback order
 pref-channels-order-hint = Check to enable; ↑ raises priority. Channels without a key are skipped.
-pref-bing-section = Bing (Azure)
+pref-bing-section = Bing Translate
+pref-bing-mode = Mode
+pref-bing-mode-edge = Edge free (no key required)
+pref-bing-mode-azure = Azure official API
 pref-azure-key = Azure key
 pref-azure-region = Region (e.g. global / eastasia)
 pref-deepseek-section = DeepSeek

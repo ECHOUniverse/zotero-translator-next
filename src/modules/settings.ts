@@ -143,6 +143,7 @@ export function initPrefsWindow(win: Window): void {
     });
   }
   syncChannelSubsections(doc);
+  initBingModeUI(doc);
 
   const customBox = doc.querySelector(
     "#ztr-custom-channels",
@@ -304,6 +305,31 @@ function syncChannelSubsections(doc: Document): void {
   const ds = doc.querySelector("#ztr-deepseek-config") as HTMLElement | null;
   if (bing) bing.hidden = !prefs.bingEnabled;
   if (ds) ds.hidden = !prefs.deepseekEnabled;
+}
+
+/** Bing 模式 radio：初始化选中态，切换时写 prefs 并显隐 Azure 字段 */
+function initBingModeUI(doc: Document): void {
+  const group = doc.querySelector("#ztr-bing-mode-group");
+  if (!group) return;
+  syncBingModeUI(doc);
+  group.addEventListener("change", (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (input?.name !== "ztr-bing-mode" || !input.checked) return;
+    prefs.bingMode = input.value === "azure" ? "azure" : "edge";
+    syncBingModeUI(doc);
+  });
+}
+
+function syncBingModeUI(doc: Document): void {
+  const mode = prefs.bingMode === "azure" ? "azure" : "edge";
+  for (const radio of doc.querySelectorAll('input[name="ztr-bing-mode"]')) {
+    (radio as HTMLInputElement).checked =
+      (radio as HTMLInputElement).value === mode;
+  }
+  const fields = doc.querySelector(
+    "#ztr-bing-azure-fields",
+  ) as HTMLElement | null;
+  if (fields) fields.hidden = mode !== "azure";
 }
 
 function renderChannelOrder(doc: Document, box: HTMLElement): void {

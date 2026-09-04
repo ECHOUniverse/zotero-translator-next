@@ -17,7 +17,7 @@ pref("historyCapacity", 500);
 // 渠道
 pref("mymemory.enabled", true);
 pref("bing.enabled", true);
-pref("bing.mode", "azure"); // Edge 匿名端点已关闭（2026），仅 Azure key 模式
+pref("bing.mode", "edge"); // edge = 免费匿名（未文档化端点，失效自动走回退链）；azure = 官方 key
 pref("bing.azureKey", "");
 pref("bing.azureRegion", "");
 pref("deepseek.enabled", true);

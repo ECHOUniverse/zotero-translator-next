@@ -26,7 +26,10 @@ pref-context-aware =
 
 pref-channels-title = 渠道与回退顺序
 pref-channels-order-hint = 勾选启用；↑ 提高优先级。未配置 key 的渠道会被跳过。
-pref-bing-section = 必应（Azure）
+pref-bing-section = 必应翻译
+pref-bing-mode = 模式
+pref-bing-mode-edge = Edge 免费（无需 key）
+pref-bing-mode-azure = Azure 官方 API
 pref-azure-key = Azure key
 pref-azure-region = Region（如 global/eastasia）
 pref-deepseek-section = DeepSeek

@@ -176,12 +176,27 @@
               data-l10n-id="pref-bing-section"
             ></html:div>
             <html:div class="ztr-prefs-field">
-              <html:label data-l10n-id="pref-azure-key"></html:label>
-              <html:input type="password" preference="bing.azureKey" />
+              <html:label data-l10n-id="pref-bing-mode"></html:label>
+              <html:div id="ztr-bing-mode-group" class="ztr-prefs-control">
+                <html:label>
+                  <html:input type="radio" name="ztr-bing-mode" value="edge" />
+                  <html:span data-l10n-id="pref-bing-mode-edge"></html:span>
+                </html:label>
+                <html:label>
+                  <html:input type="radio" name="ztr-bing-mode" value="azure" />
+                  <html:span data-l10n-id="pref-bing-mode-azure"></html:span>
+                </html:label>
+              </html:div>
             </html:div>
-            <html:div class="ztr-prefs-field">
-              <html:label data-l10n-id="pref-azure-region"></html:label>
-              <html:input type="text" preference="bing.azureRegion" />
+            <html:div id="ztr-bing-azure-fields" hidden="true">
+              <html:div class="ztr-prefs-field">
+                <html:label data-l10n-id="pref-azure-key"></html:label>
+                <html:input type="password" preference="bing.azureKey" />
+              </html:div>
+              <html:div class="ztr-prefs-field">
+                <html:label data-l10n-id="pref-azure-region"></html:label>
+                <html:input type="text" preference="bing.azureRegion" />
+              </html:div>
             </html:div>
           </html:div>
 
