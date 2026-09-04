@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { config } from "../package.json";
+import { config } from "../../package.json";
 
 /**
  * 阅读器翻译链路回归测试：
@@ -245,7 +245,7 @@ describe("reader selection translate", function () {
       );
 
       // 9. 历史落库验证：按父条目查询应命中（阅读器翻译关联文章）
-      const { getHistoryByItem } = await import("../src/modules/history");
+      const { getHistoryByItem } = await import("../../src/modules/history");
       const parentHistory = await getHistoryByItem(parentID, 10);
       assert.ok(
         parentHistory.some((h) => h.sourceText === sourceText),

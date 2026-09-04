@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { config } from "../package.json";
+import { config } from "../../package.json";
 
 describe("startup", function () {
   this.timeout(30000);
@@ -208,7 +208,7 @@ describe("startup", function () {
     assert.ok(task.engine, "应记录实际渠道");
 
     // 历史落库验证：全局历史应包含此记录；按 itemID 查询应命中
-    const { getHistoryByItem } = await import("../src/modules/history");
+    const { getHistoryByItem } = await import("../../src/modules/history");
     const globalHistory = await getHistoryByItem(null, 10);
     assert.ok(
       globalHistory.some((h) => h.sourceText === task.sourceText),

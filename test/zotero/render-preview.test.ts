@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { renderContent } from "../src/utils/renderContent";
+import { renderContent } from "../../src/utils/renderContent";
 
 /**
  * 布局回归：在真实区块 body 中构造与 renderHistoryList 完全同构的历史条目 DOM
