@@ -59,7 +59,7 @@ pref-summary-lang-custom = Custom…
 pref-summary-model = Summary model
 pref-summary-model-hint = Leave empty to use the current LLM channel's default model
 pref-summary-prompt = Summary prompt
-pref-summary-prompt-hint = Leave empty for the default structured template (research question/method/findings/conclusions/limitations); {targetLang} is replaced with the actual language name
+pref-summary-prompt-hint = Leave empty for the default paragraph-level template (one-line takeaway + 3–5 bullets, tuned for STEM literature, keeps numbers and terms); {targetLang} is replaced with the actual language name
 
 pref-display-title = Display
 pref-display-markdown =

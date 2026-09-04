@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import {
   DEFAULT_SUMMARY_PROMPT,
+  LEGACY_SUMMARY_PROMPT,
   buildPrompt,
   resolveSummaryLang,
   NOTE_TITLE,
@@ -11,16 +12,21 @@ import {
 
 describe("summary 模块", function () {
   describe("summary buildPrompt 提示词构建", function () {
-    it("默认模板含结构化小节", function () {
-      for (const section of [
-        "研究问题",
-        "研究方法",
-        "主要发现",
-        "结论",
-        "局限",
+    it("默认模板含理工科片段总结关键要素", function () {
+      for (const keyword of [
+        "一句话",
+        "3–5 条要点",
+        "性能指标",
+        "保留关键数字",
+        "不编造",
       ]) {
-        expect(DEFAULT_SUMMARY_PROMPT).to.include(section);
+        expect(DEFAULT_SUMMARY_PROMPT).to.include(keyword);
       }
+    });
+
+    it("默认模板不含旧版全文五段式小节", function () {
+      expect(DEFAULT_SUMMARY_PROMPT).to.not.include("研究问题");
+      expect(DEFAULT_SUMMARY_PROMPT).to.not.include("300 字");
     });
 
     it("默认模板含 {targetLang} 占位符", function () {
@@ -55,6 +61,21 @@ describe("summary 模块", function () {
       expect(buildPrompt("   ", "zh-CN")).to.equal(
         buildPrompt(undefined, "zh-CN"),
       );
+    });
+
+    it("旧版默认模板视为未自定义，回落新默认模板", function () {
+      expect(buildPrompt(LEGACY_SUMMARY_PROMPT, "zh-CN")).to.equal(
+        buildPrompt(undefined, "zh-CN"),
+      );
+      expect(buildPrompt(` ${LEGACY_SUMMARY_PROMPT} `, "zh-CN")).to.equal(
+        buildPrompt(undefined, "zh-CN"),
+      );
+    });
+
+    it("默认模板插值结果不含旧模板小节", function () {
+      const prompt = buildPrompt(undefined, "zh-CN");
+      expect(prompt).to.include("请用 中文 总结这段文字");
+      expect(prompt).to.not.include("研究问题");
     });
   });
 

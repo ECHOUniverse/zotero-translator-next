@@ -19,8 +19,18 @@ export interface SummaryResult {
   channelId: string;
 }
 
-/** 默认总结提示词（D7：中文结构化模板；{targetLang} 在 buildPrompt 中插值） */
-export const DEFAULT_SUMMARY_PROMPT = `你是学术助理。请用 {targetLang} 对以下翻译文本进行结构化总结：
+/**
+ * 默认总结提示词（D7：理工类文献片段自适应模板；{targetLang} 在 buildPrompt 中插值）。
+ * 输入通常是划选片段的译文，按片段实际内容自适应提炼，不套全文骨架。
+ */
+export const DEFAULT_SUMMARY_PROMPT = `你是理工科文献阅读助手。输入通常是学术文献中的一个片段（方法、实验、结果或讨论的选段译文）。请用 {targetLang} 总结这段文字：
+- 第一行：一句话点明本段核心（做了什么 / 得到什么结果）。
+- 随后按片段实际内容列 3–5 条要点，优先涵盖：方法或算法、实验条件与关键参数、重要数据或性能指标、结论或启示；片段没有的维度直接省略，不要硬凑。
+- 保留关键数字、单位与专业术语；只依据给定文本，不编造、不补充外部知识。
+控制在 200 字以内。`;
+
+/** 旧版默认模板：升级用户设置里可能已固化的旧默认值，视为未自定义以平滑过渡 */
+export const LEGACY_SUMMARY_PROMPT = `你是学术助理。请用 {targetLang} 对以下翻译文本进行结构化总结：
 ## 研究问题
 ## 研究方法
 ## 主要发现
@@ -30,12 +40,16 @@ export const DEFAULT_SUMMARY_PROMPT = `你是学术助理。请用 {targetLang} 
 
 /**
  * 构建总结 system prompt（纯函数，可单测）：
- * - 自定义提示词非空时覆盖默认模板
+ * - 自定义提示词非空时覆盖默认模板；等于旧版默认模板时视为未自定义
  * - `{targetLang}` 用语言名替换（zh-CN → 中文、en-US → English；未知代号回退原文）
  */
 export function buildPrompt(prompt: string | undefined, lang: string): string {
-  const template = (prompt ?? "").trim() || DEFAULT_SUMMARY_PROMPT;
-  return template.replaceAll("{targetLang}", langDisplayName(lang));
+  const template = (prompt ?? "").trim();
+  const effective =
+    !template || template === LEGACY_SUMMARY_PROMPT.trim()
+      ? DEFAULT_SUMMARY_PROMPT
+      : template;
+  return effective.replaceAll("{targetLang}", langDisplayName(lang));
 }
 
 /**

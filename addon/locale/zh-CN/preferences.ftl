@@ -59,7 +59,7 @@ pref-summary-lang-custom = 自定义…
 pref-summary-model = 总结模型
 pref-summary-model-hint = 留空 = 使用当前 LLM 渠道默认模型
 pref-summary-prompt = 总结提示词
-pref-summary-prompt-hint = 留空 = 默认结构化模板（研究问题/方法/主要发现/结论/局限）；{targetLang} 会被替换为实际语言名
+pref-summary-prompt-hint = 留空 = 默认片段总结模板（一句话核心 + 3–5 条要点，面向理工类文献，保留数据与术语）；{targetLang} 会被替换为实际语言名
 
 pref-display-title = 显示
 pref-display-markdown =
