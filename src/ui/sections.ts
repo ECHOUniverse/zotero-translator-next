@@ -795,8 +795,6 @@ function buildSelectionCard(ctx: SectionCtx): void {
   clear.addEventListener("click", () => {
     const itemID = ctx.itemID;
     if (itemID == null || !ctx.selection) return;
-    const win = ctx.doc.defaultView as Window | null;
-    if (win && !win.confirm(getString("ztr-selection-clear-confirm"))) return;
     ctx.selection.clear(itemID);
   });
   actions.append(clear);

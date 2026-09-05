@@ -56,7 +56,6 @@ ztr-already-in-selection = Already in selection
 ztr-selection-limit = Limit reached (50)
 ztr-selection-translate-all = Translate all
 ztr-selection-clear = Clear
-ztr-selection-clear-confirm = Clear multi-region selection for this item?
 ztr-selection-delete = Remove region
 
 # Summary

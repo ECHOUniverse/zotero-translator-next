@@ -114,7 +114,6 @@ export type FluentMessageId =
   | 'ztr-section-reader-header'
   | 'ztr-section-selection-title'
   | 'ztr-selection-clear'
-  | 'ztr-selection-clear-confirm'
   | 'ztr-selection-count'
   | 'ztr-selection-delete'
   | 'ztr-selection-limit'

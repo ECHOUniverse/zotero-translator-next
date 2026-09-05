@@ -56,7 +56,6 @@ ztr-already-in-selection = 已在选区中
 ztr-selection-limit = 已达上限(50段)
 ztr-selection-translate-all = 翻译全部
 ztr-selection-clear = 清空
-ztr-selection-clear-confirm = 清空当前文献的跨区域选区？
 ztr-selection-delete = 移除此区域
 
 # 总结
