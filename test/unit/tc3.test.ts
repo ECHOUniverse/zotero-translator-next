@@ -31,7 +31,9 @@ describe("tc3", function () {
     });
 
     expect(signed.authorization).to.match(/^TC3-HMAC-SHA256 Credential=/);
-    expect(signed.authorization).to.contain("SignedHeaders=content-type;host;x-tc-action");
+    expect(signed.authorization).to.contain(
+      "SignedHeaders=content-type;host;x-tc-action",
+    );
     expect(signed.authorization).to.contain("Signature=");
     expect(signed.headers["Content-Type"]).to.equal(
       "application/json; charset=utf-8",

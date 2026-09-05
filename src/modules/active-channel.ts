@@ -48,7 +48,9 @@ export function notifyChannelPrefsChanged(): void {
     try {
       listener();
     } catch (e) {
-      (globalThis as { ztoolkit?: { log: (msg: string) => void } }).ztoolkit?.log?.(
+      (
+        globalThis as { ztoolkit?: { log: (msg: string) => void } }
+      ).ztoolkit?.log?.(
         `[active-channel] prefs listener error: ${(e as Error).message}`,
       );
     }

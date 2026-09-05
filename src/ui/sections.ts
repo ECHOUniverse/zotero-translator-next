@@ -485,8 +485,7 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   if (task.engine) {
     const engine = el(doc, "span");
     engine.className = "ztr-badge ztr-badge-channel";
-    const actualName =
-      channelRegistry.get(task.engine)?.name ?? task.engine;
+    const actualName = channelRegistry.get(task.engine)?.name ?? task.engine;
     if (task.channelId && task.engine !== task.channelId) {
       const requestedName =
         channelRegistry.get(task.channelId)?.name ?? task.channelId;

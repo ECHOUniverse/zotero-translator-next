@@ -78,7 +78,9 @@ export async function signTC3(
   const hashedPayload = await sha256Hex(payload);
 
   const canonicalHeaders =
-    `content-type:${contentType}\n` + `host:${host}\n` + `x-tc-action:${action.toLowerCase()}\n`;
+    `content-type:${contentType}\n` +
+    `host:${host}\n` +
+    `x-tc-action:${action.toLowerCase()}\n`;
   const signedHeaders = "content-type;host;x-tc-action";
 
   const canonicalRequest = [

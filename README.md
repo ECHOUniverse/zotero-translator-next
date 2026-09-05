@@ -40,13 +40,13 @@
 
 **默认渠道 MyMemory**（免费、无需配置）。如需更稳定/大量翻译，在设置中配置：
 
-| 渠道       | 配置                   | 说明                                                                 |
-| -------- | ---------------------- | -------------------------------------------------------------------- |
-| MyMemory | 无需配置               | 免费匿名，单请求 ≤500 字符（自动分块），有日配额                     |
-| Bing     | 无需配置（Edge 模式）  | Edge 内置翻译接口，免费匿名；可选 Azure Key 官方模式                 |
-| DeepSeek | API Key                | `https://api.deepseek.com` + `deepseek-chat`，流式                   |
-| 腾讯云 TMT | SecretId + SecretKey | 官方机器翻译 API；每月约 500 万字符免费额度（[计费说明](https://cloud.tencent.com/document/product/551/35017)） |
-| 自定义   | Base URL + Key + Model | 任意 OpenAI 兼容服务（可多个）                                       |
+| 渠道       | 配置                   | 说明                                                                                                            |
+| ---------- | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| MyMemory   | 无需配置               | 免费匿名，单请求 ≤500 字符（自动分块），有日配额                                                                |
+| Bing       | 无需配置（Edge 模式）  | Edge 内置翻译接口，免费匿名；可选 Azure Key 官方模式                                                            |
+| DeepSeek   | API Key                | `https://api.deepseek.com` + `deepseek-chat`，流式                                                              |
+| 腾讯云 TMT | SecretId + SecretKey   | 官方机器翻译 API；每月约 500 万字符免费额度（[计费说明](https://cloud.tencent.com/document/product/551/35017)） |
+| 自定义     | Base URL + Key + Model | 任意 OpenAI 兼容服务（可多个）                                                                                  |
 
 渠道顺序即回退顺序（设置中 ↑↓ 调整）；未配置 key 的渠道自动跳过。
 

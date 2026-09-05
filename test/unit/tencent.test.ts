@@ -130,19 +130,20 @@ describe("TencentService", function () {
     store[`${PREFIX}tencent.secretId`] = "AKIDxxx";
     store[`${PREFIX}tencent.secretKey`] = "secret";
 
-    mockFetch(() =>
-      new Response(
-        JSON.stringify({
-          Response: {
-            Error: {
-              Code: "RequestLimitExceeded",
-              Message: "rate limit",
+    mockFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            Response: {
+              Error: {
+                Code: "RequestLimitExceeded",
+                Message: "rate limit",
+              },
+              RequestId: "req-2",
             },
-            RequestId: "req-2",
-          },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
     );
 
     const svc = new TencentService();
@@ -159,11 +160,12 @@ describe("TencentService", function () {
     store[`${PREFIX}tencent.secretId`] = "AKIDxxx";
     store[`${PREFIX}tencent.secretKey`] = "secret";
 
-    mockFetch(() =>
-      new Response(
-        JSON.stringify({ Response: { RequestId: "req-3" } }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+    mockFetch(
+      () =>
+        new Response(JSON.stringify({ Response: { RequestId: "req-3" } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     );
 
     const svc = new TencentService();

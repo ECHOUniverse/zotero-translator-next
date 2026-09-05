@@ -306,7 +306,9 @@ function setChannelEnabled(id: string, enabled: boolean): void {
 function syncChannelSubsections(doc: Document): void {
   const bing = doc.querySelector("#ztr-bing-config") as HTMLElement | null;
   const ds = doc.querySelector("#ztr-deepseek-config") as HTMLElement | null;
-  const tencent = doc.querySelector("#ztr-tencent-config") as HTMLElement | null;
+  const tencent = doc.querySelector(
+    "#ztr-tencent-config",
+  ) as HTMLElement | null;
   if (bing) bing.hidden = !prefs.bingEnabled;
   if (ds) ds.hidden = !prefs.deepseekEnabled;
   if (tencent) tencent.hidden = !prefs.tencentEnabled;
