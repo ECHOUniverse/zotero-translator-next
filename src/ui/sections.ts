@@ -63,8 +63,8 @@ const SELECTION_BLOCK_ID = "ztr-reader-selection";
 const PREVIEW_HEAD_LEN = 24;
 const PREVIEW_TAIL_LEN = 24;
 
-/** 侧栏历史区每篇文章显示条数上限 */
-const HISTORY_LIMIT = 20;
+/** 侧栏历史区每篇文章显示条数上限（最近 5 条） */
+const HISTORY_LIMIT = 5;
 
 /** XUL 文档中创建 HTML 元素必须显式指定 HTML 命名空间（createElement 默认 XUL） */
 const HTML_NS = "http://www.w3.org/1999/xhtml";
