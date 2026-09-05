@@ -27,6 +27,22 @@ export interface ShortcutConfig {
 
 const PREFIX = config.prefsPrefix;
 
+/** 内置渠道 id（顺序用于迁移补全） */
+export const BUILTIN_CHANNEL_IDS = [
+  "mymemory",
+  "deepseek",
+  "bing",
+  "tencent",
+] as const;
+
+function mergeBuiltinChannels(order: string[]): string[] {
+  const merged = [...order];
+  for (const id of BUILTIN_CHANNEL_IDS) {
+    if (!merged.includes(id)) merged.push(id);
+  }
+  return merged;
+}
+
 function get<T = string | number | boolean>(key: string): T {
   return Zotero.Prefs.get(`${PREFIX}.${key}`, true) as T;
 }
@@ -176,8 +192,32 @@ export const prefs = {
   set deepseekPrompt(v: string) {
     set("deepseek.prompt", v);
   },
+  get tencentEnabled() {
+    return get<boolean>("tencent.enabled");
+  },
+  set tencentEnabled(v: boolean) {
+    set("tencent.enabled", v);
+  },
+  get tencentSecretId() {
+    return get<string>("tencent.secretId");
+  },
+  set tencentSecretId(v: string) {
+    set("tencent.secretId", v);
+  },
+  get tencentSecretKey() {
+    return get<string>("tencent.secretKey");
+  },
+  set tencentSecretKey(v: string) {
+    set("tencent.secretKey", v);
+  },
+  get tencentRegion() {
+    return get<string>("tencent.region");
+  },
+  set tencentRegion(v: string) {
+    set("tencent.region", v);
+  },
   get channelsOrder(): string[] {
-    return getJSON<string[]>("channelsOrder");
+    return mergeBuiltinChannels(getJSON<string[]>("channelsOrder"));
   },
   set channelsOrder(v: string[]) {
     setJSON("channelsOrder", v);

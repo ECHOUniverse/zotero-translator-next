@@ -12,7 +12,7 @@
 
 - **Translate selection**: select text in the PDF reader → click "Translate selection" in the popup → the translation appears in the sidebar section
 - **Rule-based formatting pipeline**: automatic line-break merging, hyphenation repair, quote/dash/full-width/symbol normalization (each toggleable; deterministic and free)
-- **Multi-channel with automatic fallback**: MyMemory (free, no key) → DeepSeek → Bing (Azure) → custom OpenAI-compatible channels; failures fall back in configured order, with exponential backoff on 429 rate limits
+- **Multi-channel with automatic fallback**: MyMemory (free, no key) → DeepSeek → Bing (Edge free mode, optional Azure official) → Tencent Cloud TMT → custom OpenAI-compatible channels; failures fall back in configured order, with exponential backoff on 429 rate limits
 - **Streaming experience**: token-by-token streaming for AI channels; translation queue with cancel; auto-translate on selection (off by default, debounce adjustable); context-aware prompts for LLM channels
 - **Translation history**: persisted in the Zotero database; **the sidebar shows only the current item's history** (clearly separated from the current translation by section titles, with a “current” badge on the record matching the active task) + per-record deletion / clear item history; a **“View all history” window** browses all records per item via tabs; identical text automatically hits the cache (toggleable)
 - **AI summaries**: stream a summary of the translation (reuses your AI channel; model/prompt independently configurable) and optionally save it to history
@@ -36,12 +36,13 @@
 
 **The default channel is MyMemory** (free, no configuration needed). For more stable or high-volume translation, configure a channel in the preferences:
 
-| Channel      | Configuration          | Notes                                                              |
-| ------------ | ---------------------- | ------------------------------------------------------------------ |
-| MyMemory     | none                   | Free anonymous; ≤500 chars per request (auto-chunked); daily quota |
-| DeepSeek     | API Key                | `https://api.deepseek.com` + `deepseek-chat`, streaming            |
-| Bing (Azure) | Azure Key + Region     | Official Cognitive Services; F0 free tier 2M chars/month           |
-| Custom       | Base URL + Key + Model | Any OpenAI-compatible service (multiple allowed)                   |
+| Channel        | Configuration              | Notes                                                                                    |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
+| MyMemory       | none                       | Free anonymous; ≤500 chars per request (auto-chunked); daily quota                         |
+| Bing           | none (Edge mode)           | Edge built-in translate API, free anonymous; optional Azure Key official mode            |
+| DeepSeek       | API Key                    | `https://api.deepseek.com` + `deepseek-chat`, streaming                                  |
+| Tencent TMT    | SecretId + SecretKey       | Official Machine Translation API; ~5M free chars/month ([billing](https://cloud.tencent.com/document/product/551/35017)) |
+| Custom         | Base URL + Key + Model     | Any OpenAI-compatible service (multiple allowed)                                         |
 
 Channel order is the fallback order (adjust with ↑↓ in settings); channels without a key are skipped automatically.
 
@@ -67,7 +68,7 @@ Architecture: `src/modules/` (formatting/chunking/queue/history/summary), `src/s
 ## Privacy
 
 - API keys are stored in plain text in the Zotero profile prefs.js (Zotero has no encrypted storage API)
-- Text to translate is sent to the selected third-party service (MyMemory / DeepSeek / Azure / custom)
+- Text to translate is sent to the selected third-party service (MyMemory / Bing / DeepSeek / Tencent Cloud TMT / custom)
 - History data lives only in your local Zotero database
 
 ## License

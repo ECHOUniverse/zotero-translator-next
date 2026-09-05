@@ -19,6 +19,7 @@ import {
 } from "../utils/cancel";
 import { channelRegistry } from "../services";
 import { MYMEMORY_MAX_CHARS } from "../services/mymemory";
+import { TMT_MAX_CHARS } from "../services/tencent";
 import { hashSource, addHistory, queryCache } from "./history";
 import type { TranslateChannelId } from "../services/base";
 
@@ -202,7 +203,9 @@ export class TranslateManager {
           maxChars:
             channelId === "mymemory"
               ? MYMEMORY_MAX_CHARS
-              : prefs.chunkMaxChars || 10000,
+              : channelId === "tencent"
+                ? TMT_MAX_CHARS
+                : prefs.chunkMaxChars || 10000,
         });
 
     const fullChunks: string[] = [];

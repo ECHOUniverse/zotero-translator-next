@@ -47,9 +47,15 @@ pref-deepseek-balance-line = { $currency } { $total }（赠送 { $granted } / �
 pref-deepseek-balance-unavailable = 余额不足，API 可能无法调用
 pref-deepseek-legacy-hint = 当前模型 { $model } 为旧版别名，建议改用 deepseek-v4-flash 或 deepseek-v4-pro
 
+pref-tencent-section = 腾讯云机器翻译
+pref-tencent-secret-id = SecretId
+pref-tencent-secret-key = SecretKey
+pref-tencent-region = Region
+pref-tencent-hint = 在腾讯云控制台开通机器翻译并创建 API 密钥；文本翻译每月约 500 万字符免费额度（以官方计费为准）。
+
 pref-custom-channels-title = 自定义 OpenAI 兼容渠道
 pref-add-channel = 添加
-pref-privacy-hint = 注意：API Key 明文保存在 Zotero profile 的 prefs.js 中；待翻译文本会发送至对应服务。
+pref-privacy-hint = 注意：API Key 明文保存在 Zotero profile 的 prefs.js 中；待翻译文本会发送至对应服务（含腾讯云机器翻译）。
 
 pref-shortcuts-title = 快捷键（点击输入框后按键）
 pref-shortcut-translate = 翻译

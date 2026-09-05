@@ -26,6 +26,10 @@ declare namespace _ZoteroTypes {
       "deepseek.apiKey": string;
       "deepseek.baseURL": string;
       "deepseek.model": string;
+      "tencent.enabled": boolean;
+      "tencent.secretId": string;
+      "tencent.secretKey": string;
+      "tencent.region": string;
       "deepseek.prompt": string;
       "channelsOrder": string;
       "customChannels": string;

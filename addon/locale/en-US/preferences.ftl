@@ -47,9 +47,15 @@ pref-deepseek-balance-line = { $currency } { $total } (granted { $granted } / to
 pref-deepseek-balance-unavailable = Balance is insufficient; API calls may fail
 pref-deepseek-legacy-hint = Current model { $model } is a legacy alias. Switch to deepseek-v4-flash or deepseek-v4-pro.
 
+pref-tencent-section = Tencent Cloud TMT
+pref-tencent-secret-id = SecretId
+pref-tencent-secret-key = SecretKey
+pref-tencent-region = Region
+pref-tencent-hint = Enable Machine Translation in Tencent Cloud console and create API keys. Text translation includes about 5M free characters/month (see official billing).
+
 pref-custom-channels-title = Custom OpenAI-compatible channels
 pref-add-channel = Add
-pref-privacy-hint = Note: API keys are stored in plain text in the Zotero profile prefs.js; text to translate is sent to the corresponding service.
+pref-privacy-hint = Note: API keys are stored in plain text in the Zotero profile prefs.js; text to translate is sent to the corresponding service (including Tencent Cloud Machine Translation).
 
 pref-shortcuts-title = Shortcuts (click a field, then press keys)
 pref-shortcut-translate = Translate

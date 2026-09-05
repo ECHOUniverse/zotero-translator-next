@@ -10,6 +10,7 @@ import { CancelError } from "../utils/cancel";
 import { BingService } from "./bing";
 import { MyMemoryService } from "./mymemory";
 import { OpenAIService } from "./openai";
+import { TencentService } from "./tencent";
 import type {
   ChannelMeta,
   TranslateChunk,
@@ -18,7 +19,28 @@ import type {
   TranslateTask,
 } from "./base";
 
-export { BingService, MyMemoryService, OpenAIService };
+export { BingService, MyMemoryService, OpenAIService, TencentService };
+
+function isBuiltinEnabled(id: string): boolean {
+  switch (id) {
+    case "mymemory":
+      return prefs.mymemoryEnabled;
+    case "bing":
+      return prefs.bingEnabled;
+    case "deepseek":
+      return prefs.deepseekEnabled;
+    case "tencent":
+      return prefs.tencentEnabled;
+    default:
+      return true;
+  }
+}
+
+function builtinNeedsConfig(id: string): boolean {
+  if (id === "mymemory") return false;
+  if (id === "bing") return prefs.bingMode === "azure";
+  return true;
+}
 
 export class ChannelRegistry {
   private services = new Map<string, TranslateService>();
@@ -32,6 +54,8 @@ export class ChannelRegistry {
         return new BingService();
       case "deepseek":
         return OpenAIService.createDeepSeek();
+      case "tencent":
+        return new TencentService();
       default:
         return null;
     }
@@ -78,24 +102,14 @@ export class ChannelRegistry {
     for (const id of order) {
       const svc = this.get(id);
       if (!svc) continue;
-      const enabled =
-        id === "mymemory"
-          ? prefs.mymemoryEnabled
-          : id === "bing"
-            ? prefs.bingEnabled
-            : id === "deepseek"
-              ? prefs.deepseekEnabled
-              : true;
-      if (!enabled) continue;
+      if (!isBuiltinEnabled(id)) continue;
       metas.push({
         id: svc.id,
         name: svc.name,
         kind: svc.kind,
-        needsConfig:
-          (id !== "mymemory" && id !== "bing") ||
-          (id === "bing" && prefs.bingMode === "azure"),
+        needsConfig: builtinNeedsConfig(id),
         configured: svc.isConfigured(),
-        enabled,
+        enabled: true,
       });
     }
     return metas;
@@ -112,18 +126,9 @@ export class ChannelRegistry {
         id: svc.id,
         name: svc.name,
         kind: svc.kind,
-        needsConfig:
-          (id !== "mymemory" && id !== "bing") ||
-          (id === "bing" && prefs.bingMode === "azure"),
+        needsConfig: builtinNeedsConfig(id),
         configured: svc.isConfigured(),
-        enabled:
-          id === "mymemory"
-            ? prefs.mymemoryEnabled
-            : id === "bing"
-              ? prefs.bingEnabled
-              : id === "deepseek"
-                ? prefs.deepseekEnabled
-                : true,
+        enabled: isBuiltinEnabled(id),
       });
     }
     return metas;
@@ -153,15 +158,7 @@ export class ChannelRegistry {
       if (task.token.cancelled) throw new CancelError();
       const svc = this.get(id);
       if (!svc) continue;
-      const enabled =
-        id === "mymemory"
-          ? prefs.mymemoryEnabled
-          : id === "bing"
-            ? prefs.bingEnabled
-            : id === "deepseek"
-              ? prefs.deepseekEnabled
-              : true;
-      if (!enabled || !svc.isConfigured()) continue;
+      if (!isBuiltinEnabled(id) || !svc.isConfigured()) continue;
 
       try {
         const result = await this.translateWithRetry(svc, task, onChunk);

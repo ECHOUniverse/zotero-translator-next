@@ -24,11 +24,15 @@ pref("deepseek.enabled", true);
 pref("deepseek.apiKey", "");
 pref("deepseek.baseURL", "https://api.deepseek.com");
 pref("deepseek.model", "deepseek-v4-flash");
+pref("tencent.enabled", true);
+pref("tencent.secretId", "");
+pref("tencent.secretKey", "");
+pref("tencent.region", "ap-guangzhou");
 pref(
   "deepseek.prompt",
   "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation.",
 );
-pref("channelsOrder", '["mymemory","deepseek","bing"]');
+pref("channelsOrder", '["mymemory","deepseek","bing","tencent"]');
 pref("customChannels", "[]");
 
 // 快捷键（JSON: {ctrl,shift,alt,meta,key}）

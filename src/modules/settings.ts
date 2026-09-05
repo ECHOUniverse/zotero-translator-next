@@ -298,13 +298,16 @@ function setChannelEnabled(id: string, enabled: boolean): void {
   if (id === "mymemory") prefs.mymemoryEnabled = enabled;
   else if (id === "bing") prefs.bingEnabled = enabled;
   else if (id === "deepseek") prefs.deepseekEnabled = enabled;
+  else if (id === "tencent") prefs.tencentEnabled = enabled;
 }
 
 function syncChannelSubsections(doc: Document): void {
   const bing = doc.querySelector("#ztr-bing-config") as HTMLElement | null;
   const ds = doc.querySelector("#ztr-deepseek-config") as HTMLElement | null;
+  const tencent = doc.querySelector("#ztr-tencent-config") as HTMLElement | null;
   if (bing) bing.hidden = !prefs.bingEnabled;
   if (ds) ds.hidden = !prefs.deepseekEnabled;
+  if (tencent) tencent.hidden = !prefs.tencentEnabled;
 }
 
 /** Bing 模式 radio：初始化选中态，切换时写 prefs 并显隐 Azure 字段 */
