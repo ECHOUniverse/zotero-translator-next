@@ -37,6 +37,11 @@ import {
 } from "../utils/cancel";
 import { openPluginPreferences } from "../modules/settings";
 import {
+  resolveActiveChannelId,
+  setExplicitChannelId,
+  subscribeChannelPrefsChanged,
+} from "../modules/active-channel";
+import {
   SelectionManager,
   joinRegions,
   type SelectionRegion,
@@ -69,9 +74,8 @@ function el(doc: Document, tag: string): any {
 }
 
 /** 工具栏当前选中的渠道（翻译入口读取） */
-let selectedChannelId = "mymemory";
 export function getSelectedChannelId(): string {
-  return selectedChannelId;
+  return resolveActiveChannelId();
 }
 
 let summaryManager: SummaryManager | null = null;
@@ -481,7 +485,15 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
   if (task.engine) {
     const engine = el(doc, "span");
     engine.className = "ztr-badge ztr-badge-channel";
-    engine.textContent = channelRegistry.get(task.engine)?.name ?? task.engine;
+    const actualName =
+      channelRegistry.get(task.engine)?.name ?? task.engine;
+    if (task.channelId && task.engine !== task.channelId) {
+      const requestedName =
+        channelRegistry.get(task.channelId)?.name ?? task.channelId;
+      engine.textContent = `${requestedName} → ${actualName}`;
+    } else {
+      engine.textContent = actualName;
+    }
     statusRow.append(engine);
   }
   if (task.detectedLang && task.detectedLang !== "auto") {
@@ -533,7 +545,7 @@ function renderResultCard(ctx: SectionCtx, task: TranslateTaskInfo): void {
         void translateManager?.translate({
           sourceText: task.sourceText,
           itemID: task.itemID,
-          channelId: task.channelId,
+          channelId: getSelectedChannelId(),
         });
       }),
     );
@@ -586,6 +598,52 @@ function getLatestTask(translate: TranslateManager): TranslateTaskInfo | null {
 // 工具栏
 // ---------------------------------------------------------------------------
 
+const channelSelects = new Set<HTMLSelectElement>();
+let channelPrefsSubscribed = false;
+
+function populateChannelSelect(select: HTMLSelectElement): void {
+  const doc = select.ownerDocument;
+  if (!doc) return;
+  select.replaceChildren();
+  for (const meta of channelRegistry.listAll()) {
+    const opt = el(doc, "option");
+    opt.value = meta.id;
+    opt.textContent = meta.name;
+    opt.disabled = !meta.enabled || !meta.configured;
+    select.append(opt);
+  }
+  select.value = resolveActiveChannelId();
+}
+
+function ensureChannelPrefsSubscription(): void {
+  if (channelPrefsSubscribed) return;
+  channelPrefsSubscribed = true;
+  subscribeChannelPrefsChanged(() => {
+    for (const select of channelSelects) {
+      populateChannelSelect(select);
+    }
+  });
+}
+
+function ensureChannelSelect(doc: Document, toolbar: HTMLDivElement): void {
+  let channelSelect = toolbar.querySelector<HTMLSelectElement>(
+    ".ztr-channel-select",
+  );
+  if (!channelSelect) {
+    const created = el(doc, "select") as HTMLSelectElement;
+    created.className = "ztr-select ztr-channel-select";
+    created.title = getString("ztr-channel-label");
+    created.addEventListener("change", () => {
+      setExplicitChannelId(created.value);
+    });
+    toolbar.prepend(created);
+    channelSelects.add(created);
+    ensureChannelPrefsSubscription();
+    channelSelect = created;
+  }
+  populateChannelSelect(channelSelect);
+}
+
 function buildToolbar(
   doc: Document,
   root: HTMLDivElement,
@@ -594,28 +652,15 @@ function buildToolbar(
   const toolbar = root.querySelector<HTMLDivElement>(
     ctx.kind === "reader" ? "#ztr-reader-toolbar" : "#ztr-item-toolbar",
   );
-  if (!toolbar || toolbar.hasChildNodes()) return;
+  if (!toolbar) return;
 
-  // 渠道选择
-  const channelSelect = el(doc, "select");
-  channelSelect.className = "ztr-select";
-  channelSelect.title = getString("ztr-channel-label");
-  for (const meta of channelRegistry.listAll()) {
-    const opt = el(doc, "option");
-    opt.value = meta.id;
-    opt.textContent = meta.name;
-    opt.disabled = !meta.enabled || !meta.configured;
-    channelSelect.append(opt);
-  }
-  channelSelect.value = prefs.channelsOrder[0] ?? "mymemory";
-  channelSelect.addEventListener("change", () => {
-    selectedChannelId = channelSelect.value;
-  });
-  toolbar.append(channelSelect);
+  ensureChannelSelect(doc, toolbar);
+
+  if (toolbar.querySelector(".ztr-lang-select")) return;
 
   // 目标语言
   const langSelect = el(doc, "select");
-  langSelect.className = "ztr-select";
+  langSelect.className = "ztr-select ztr-lang-select";
   for (const [code, label] of TARGET_LANGUAGES) {
     const opt = el(doc, "option");
     opt.value = code;
@@ -650,7 +695,7 @@ function buildToolbar(
           ? item.getField("title")
           : undefined,
         itemID: item.id,
-        channelId: selectedChannelId,
+        channelId: getSelectedChannelId(),
       });
     });
     toolbar.append(btn);

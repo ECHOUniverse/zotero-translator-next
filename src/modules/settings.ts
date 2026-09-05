@@ -10,6 +10,7 @@ import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { prefs } from "../prefs";
 import { channelRegistry } from "../services";
+import { notifyChannelPrefsChanged } from "./active-channel";
 import {
   TARGET_LANGUAGE_CODES,
   SOURCE_LANGUAGE_CODES,
@@ -140,6 +141,7 @@ export function initPrefsWindow(win: Window): void {
       }
       prefs.channelsOrder = order;
       renderChannelOrder(doc, orderBox);
+      notifyChannelPrefsChanged();
     });
   }
   syncChannelSubsections(doc);
@@ -348,6 +350,7 @@ function renderChannelOrder(doc: Document, box: HTMLElement): void {
     enable.addEventListener("command", () => {
       setChannelEnabled(meta.id, enable.checked);
       syncChannelSubsections(doc);
+      notifyChannelPrefsChanged();
     });
 
     const name = el(doc, "span");
@@ -391,6 +394,7 @@ function renderCustomChannels(doc: Document, box: HTMLElement): void {
         "#ztr-channel-order",
       ) as HTMLElement | null;
       if (orderBox) renderChannelOrder(doc, orderBox);
+      notifyChannelPrefsChanged();
     });
     row.append(name, del);
     box.append(row);
@@ -438,6 +442,7 @@ function addCustomChannel(doc: Document, box: HTMLElement): void {
     doc,
     doc.querySelector("#ztr-channel-order") as HTMLElement,
   );
+  notifyChannelPrefsChanged();
 }
 
 function readDeepSeekForm(doc: Document): { apiKey: string; baseURL: string } {

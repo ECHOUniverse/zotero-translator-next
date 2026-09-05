@@ -12,6 +12,7 @@ import { prefs } from "../prefs";
 import { formatText } from "./formatter";
 import { chunkText, chunkTextByTokens } from "./chunker";
 import { detectLang, resolveSourceLang } from "../utils/lang";
+import { resolveActiveChannelId } from "./active-channel";
 import {
   createCancelToken,
   CancelError,
@@ -108,7 +109,7 @@ export class TranslateManager {
       collapseWhitespace: prefs.formatterCollapseWhitespace,
       normalizeSymbols: prefs.formatterNormalizeSymbols,
     });
-    const channelId = request.channelId ?? "bing";
+    const channelId = request.channelId ?? resolveActiveChannelId();
     const targetLang = prefs.targetLang;
     const sourceHash = hashSource(formattedText);
 
@@ -192,7 +193,7 @@ export class TranslateManager {
     const sourceLang = resolveSourceLang(detected, prefs.sourceLang);
     const targetLang = prefs.targetLang;
 
-    const channelId = task.channelId || "mymemory";
+    const channelId = task.channelId || resolveActiveChannelId();
     const svc = channelRegistry.get(channelId);
     const isLLM = svc?.kind === "llm";
 
