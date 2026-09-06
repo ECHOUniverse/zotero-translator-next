@@ -53,9 +53,27 @@ pref-tencent-secret-key = SecretKey
 pref-tencent-region = Region
 pref-tencent-hint = Enable Machine Translation in Tencent Cloud console and create API keys. Text translation includes about 5M free characters/month (see official billing).
 
+pref-baidu-section = Baidu Translate
+pref-baidu-app-id = App ID
+pref-baidu-app-key = Secret Key
+pref-baidu-hint = Create an app on Baidu Translate Open Platform; Standard ~50K chars/month (QPS=1), Advanced ~1M/month after personal verification.
+
+pref-aliyun-section = Aliyun Machine Translation
+pref-aliyun-access-key-id = AccessKey ID
+pref-aliyun-access-key-secret = AccessKey Secret
+pref-aliyun-endpoint = Endpoint
+pref-aliyun-hint = Enable Aliyun Machine Translation General edition; ~1M free characters/month (see official billing).
+
+pref-qwenmt-section = Qwen-MT (Model Studio)
+pref-qwenmt-api-key = API Key
+pref-qwenmt-baseurl = Base URL
+pref-qwenmt-model = Model
+pref-qwenmt-domains = Domain prompt (English, optional)
+pref-qwenmt-hint = DashScope API Key from Alibaba Cloud Model Studio; new-user free quota ~90 days (cn-beijing region, see official docs). Translation only—not used for AI summary.
+
 pref-custom-channels-title = Custom OpenAI-compatible channels
 pref-add-channel = Add
-pref-privacy-hint = Note: API keys are stored in plain text in the Zotero profile prefs.js; text to translate is sent to the corresponding service (including Tencent Cloud Machine Translation).
+pref-privacy-hint = Note: API keys are stored in plain text in the Zotero profile prefs.js; text to translate is sent to the corresponding service (including unofficial web endpoints and official APIs).
 
 pref-shortcuts-title = Shortcuts (click a field, then press keys)
 pref-shortcut-translate = Translate

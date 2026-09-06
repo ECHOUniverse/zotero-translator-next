@@ -53,9 +53,27 @@ pref-tencent-secret-key = SecretKey
 pref-tencent-region = Region
 pref-tencent-hint = 在腾讯云控制台开通机器翻译并创建 API 密钥；文本翻译每月约 500 万字符免费额度（以官方计费为准）。
 
+pref-baidu-section = 百度翻译
+pref-baidu-app-id = App ID
+pref-baidu-app-key = 密钥
+pref-baidu-hint = 在百度翻译开放平台创建应用；标准版约 5 万字符/月（QPS=1），个人认证高级版约 100 万字符/月。
+
+pref-aliyun-section = 阿里云机器翻译
+pref-aliyun-access-key-id = AccessKey ID
+pref-aliyun-access-key-secret = AccessKey Secret
+pref-aliyun-endpoint = Endpoint
+pref-aliyun-hint = 在阿里云开通机器翻译通用版；约 100 万字符/月免费额度（以官方计费为准）。
+
+pref-qwenmt-section = Qwen-MT（百炼）
+pref-qwenmt-api-key = API Key
+pref-qwenmt-baseurl = Base URL
+pref-qwenmt-model = 模型
+pref-qwenmt-domains = 领域提示（英文，可选）
+pref-qwenmt-hint = 阿里云百炼 DashScope API Key；新人约 90 天免费额度（华北2 北京地域，以官方为准）。仅用于翻译，不可用于 AI 总结。
+
 pref-custom-channels-title = 自定义 OpenAI 兼容渠道
 pref-add-channel = 添加
-pref-privacy-hint = 注意：API Key 明文保存在 Zotero profile 的 prefs.js 中；待翻译文本会发送至对应服务（含腾讯云机器翻译）。
+pref-privacy-hint = 注意：API Key 明文保存在 Zotero profile 的 prefs.js 中；待翻译文本会发送至对应服务（含第三方网页端点与官方 API）。
 
 pref-shortcuts-title = 快捷键（点击输入框后按键）
 pref-shortcut-translate = 翻译

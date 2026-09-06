@@ -298,20 +298,31 @@ function shortcutDisplay(pattern: {
 
 function setChannelEnabled(id: string, enabled: boolean): void {
   if (id === "mymemory") prefs.mymemoryEnabled = enabled;
+  else if (id === "youdao") prefs.youdaoEnabled = enabled;
+  else if (id === "transmart") prefs.transmartEnabled = enabled;
+  else if (id === "volcengine") prefs.volcengineEnabled = enabled;
+  else if (id === "google") prefs.googleEnabled = enabled;
   else if (id === "bing") prefs.bingEnabled = enabled;
   else if (id === "deepseek") prefs.deepseekEnabled = enabled;
   else if (id === "tencent") prefs.tencentEnabled = enabled;
+  else if (id === "baidu") prefs.baiduEnabled = enabled;
+  else if (id === "aliyun") prefs.aliyunEnabled = enabled;
+  else if (id === "qwenmt") prefs.qwenmtEnabled = enabled;
 }
 
 function syncChannelSubsections(doc: Document): void {
-  const bing = doc.querySelector("#ztr-bing-config") as HTMLElement | null;
-  const ds = doc.querySelector("#ztr-deepseek-config") as HTMLElement | null;
-  const tencent = doc.querySelector(
-    "#ztr-tencent-config",
-  ) as HTMLElement | null;
-  if (bing) bing.hidden = !prefs.bingEnabled;
-  if (ds) ds.hidden = !prefs.deepseekEnabled;
-  if (tencent) tencent.hidden = !prefs.tencentEnabled;
+  const map: Array<[string, boolean]> = [
+    ["#ztr-bing-config", prefs.bingEnabled],
+    ["#ztr-deepseek-config", prefs.deepseekEnabled],
+    ["#ztr-tencent-config", prefs.tencentEnabled],
+    ["#ztr-baidu-config", prefs.baiduEnabled],
+    ["#ztr-aliyun-config", prefs.aliyunEnabled],
+    ["#ztr-qwenmt-config", prefs.qwenmtEnabled],
+  ];
+  for (const [sel, enabled] of map) {
+    const el = doc.querySelector(sel) as HTMLElement | null;
+    if (el) el.hidden = !enabled;
+  }
 }
 
 /** Bing 模式 radio：初始化选中态，切换时写 prefs 并显隐 Azure 字段 */

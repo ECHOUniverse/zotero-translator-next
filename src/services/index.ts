@@ -7,10 +7,17 @@
 
 import { prefs, type CustomChannelConfig } from "../prefs";
 import { CancelError } from "../utils/cancel";
+import { AliyunService } from "./aliyun";
+import { BaiduService } from "./baidu";
 import { BingService } from "./bing";
+import { GoogleService } from "./google";
 import { MyMemoryService } from "./mymemory";
 import { OpenAIService } from "./openai";
+import { QwenMtService } from "./qwenmt";
 import { TencentService } from "./tencent";
+import { TransmartService } from "./transmart";
+import { VolcengineService } from "./volcengine";
+import { YoudaoService } from "./youdao";
 import type {
   ChannelMeta,
   TranslateChunk,
@@ -19,25 +26,59 @@ import type {
   TranslateTask,
 } from "./base";
 
-export { BingService, MyMemoryService, OpenAIService, TencentService };
+export {
+  AliyunService,
+  BaiduService,
+  BingService,
+  GoogleService,
+  MyMemoryService,
+  OpenAIService,
+  QwenMtService,
+  TencentService,
+  TransmartService,
+  VolcengineService,
+  YoudaoService,
+};
 
 function isBuiltinEnabled(id: string): boolean {
   switch (id) {
     case "mymemory":
       return prefs.mymemoryEnabled;
+    case "youdao":
+      return prefs.youdaoEnabled;
+    case "transmart":
+      return prefs.transmartEnabled;
+    case "volcengine":
+      return prefs.volcengineEnabled;
+    case "google":
+      return prefs.googleEnabled;
     case "bing":
       return prefs.bingEnabled;
     case "deepseek":
       return prefs.deepseekEnabled;
     case "tencent":
       return prefs.tencentEnabled;
+    case "baidu":
+      return prefs.baiduEnabled;
+    case "aliyun":
+      return prefs.aliyunEnabled;
+    case "qwenmt":
+      return prefs.qwenmtEnabled;
     default:
       return true;
   }
 }
 
 function builtinNeedsConfig(id: string): boolean {
-  if (id === "mymemory") return false;
+  if (
+    id === "mymemory" ||
+    id === "youdao" ||
+    id === "transmart" ||
+    id === "volcengine" ||
+    id === "google"
+  ) {
+    return false;
+  }
   if (id === "bing") return prefs.bingMode === "azure";
   return true;
 }
@@ -50,12 +91,26 @@ export class ChannelRegistry {
     switch (id) {
       case "mymemory":
         return new MyMemoryService();
+      case "youdao":
+        return new YoudaoService();
+      case "transmart":
+        return new TransmartService();
+      case "volcengine":
+        return new VolcengineService();
+      case "google":
+        return new GoogleService();
       case "bing":
         return new BingService();
       case "deepseek":
         return OpenAIService.createDeepSeek();
       case "tencent":
         return new TencentService();
+      case "baidu":
+        return new BaiduService();
+      case "aliyun":
+        return new AliyunService();
+      case "qwenmt":
+        return new QwenMtService();
       default:
         return null;
     }

@@ -16,6 +16,10 @@ pref("historyCapacity", 500);
 
 // 渠道
 pref("mymemory.enabled", true);
+pref("youdao.enabled", true);
+pref("transmart.enabled", true);
+pref("volcengine.enabled", true);
+pref("google.enabled", true);
 pref("bing.enabled", true);
 pref("bing.mode", "edge"); // edge = 免费匿名（未文档化端点，失效自动走回退链）；azure = 官方 key
 pref("bing.azureKey", "");
@@ -28,11 +32,29 @@ pref("tencent.enabled", true);
 pref("tencent.secretId", "");
 pref("tencent.secretKey", "");
 pref("tencent.region", "ap-guangzhou");
+pref("baidu.enabled", true);
+pref("baidu.appId", "");
+pref("baidu.appKey", "");
+pref("baidu.action", "0");
+pref("aliyun.enabled", true);
+pref("aliyun.accessKeyId", "");
+pref("aliyun.accessKeySecret", "");
+pref("aliyun.endpoint", "https://mt.aliyuncs.com/");
+pref("aliyun.action", "TranslateGeneral");
+pref("aliyun.scene", "general");
+pref("qwenmt.enabled", true);
+pref("qwenmt.apiKey", "");
+pref("qwenmt.baseURL", "https://dashscope.aliyuncs.com/compatible-mode");
+pref("qwenmt.model", "qwen-mt-flash");
+pref("qwenmt.domains", "");
 pref(
   "deepseek.prompt",
   "You are a professional academic translator. Translate the user-provided text from {sourceLang} into {targetLang}. Keep technical terms accurate, preserve citation markers, formulas and formatting. Output only the translation.",
 );
-pref("channelsOrder", '["mymemory","deepseek","bing","tencent"]');
+pref(
+  "channelsOrder",
+  '["mymemory","youdao","transmart","volcengine","bing","google","deepseek","tencent","baidu","aliyun","qwenmt"]',
+);
 pref("customChannels", "[]");
 
 // 快捷键（JSON: {ctrl,shift,alt,meta,key}）

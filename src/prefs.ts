@@ -30,9 +30,16 @@ const PREFIX = config.prefsPrefix;
 /** 内置渠道 id（顺序用于迁移补全） */
 export const BUILTIN_CHANNEL_IDS = [
   "mymemory",
-  "deepseek",
+  "youdao",
+  "transmart",
+  "volcengine",
   "bing",
+  "google",
+  "deepseek",
   "tencent",
+  "baidu",
+  "aliyun",
+  "qwenmt",
 ] as const;
 
 function mergeBuiltinChannels(order: string[]): string[] {
@@ -138,6 +145,30 @@ export const prefs = {
   set mymemoryEnabled(v: boolean) {
     set("mymemory.enabled", v);
   },
+  get youdaoEnabled() {
+    return get<boolean>("youdao.enabled");
+  },
+  set youdaoEnabled(v: boolean) {
+    set("youdao.enabled", v);
+  },
+  get transmartEnabled() {
+    return get<boolean>("transmart.enabled");
+  },
+  set transmartEnabled(v: boolean) {
+    set("transmart.enabled", v);
+  },
+  get volcengineEnabled() {
+    return get<boolean>("volcengine.enabled");
+  },
+  set volcengineEnabled(v: boolean) {
+    set("volcengine.enabled", v);
+  },
+  get googleEnabled() {
+    return get<boolean>("google.enabled");
+  },
+  set googleEnabled(v: boolean) {
+    set("google.enabled", v);
+  },
   get bingEnabled() {
     return get<boolean>("bing.enabled");
   },
@@ -215,6 +246,96 @@ export const prefs = {
   },
   set tencentRegion(v: string) {
     set("tencent.region", v);
+  },
+  get baiduEnabled() {
+    return get<boolean>("baidu.enabled");
+  },
+  set baiduEnabled(v: boolean) {
+    set("baidu.enabled", v);
+  },
+  get baiduAppId() {
+    return get<string>("baidu.appId");
+  },
+  set baiduAppId(v: string) {
+    set("baidu.appId", v);
+  },
+  get baiduAppKey() {
+    return get<string>("baidu.appKey");
+  },
+  set baiduAppKey(v: string) {
+    set("baidu.appKey", v);
+  },
+  get baiduAction() {
+    return get<string>("baidu.action");
+  },
+  set baiduAction(v: string) {
+    set("baidu.action", v);
+  },
+  get aliyunEnabled() {
+    return get<boolean>("aliyun.enabled");
+  },
+  set aliyunEnabled(v: boolean) {
+    set("aliyun.enabled", v);
+  },
+  get aliyunAccessKeyId() {
+    return get<string>("aliyun.accessKeyId");
+  },
+  set aliyunAccessKeyId(v: string) {
+    set("aliyun.accessKeyId", v);
+  },
+  get aliyunAccessKeySecret() {
+    return get<string>("aliyun.accessKeySecret");
+  },
+  set aliyunAccessKeySecret(v: string) {
+    set("aliyun.accessKeySecret", v);
+  },
+  get aliyunEndpoint() {
+    return get<string>("aliyun.endpoint");
+  },
+  set aliyunEndpoint(v: string) {
+    set("aliyun.endpoint", v);
+  },
+  get aliyunAction() {
+    return get<string>("aliyun.action");
+  },
+  set aliyunAction(v: string) {
+    set("aliyun.action", v);
+  },
+  get aliyunScene() {
+    return get<string>("aliyun.scene");
+  },
+  set aliyunScene(v: string) {
+    set("aliyun.scene", v);
+  },
+  get qwenmtEnabled() {
+    return get<boolean>("qwenmt.enabled");
+  },
+  set qwenmtEnabled(v: boolean) {
+    set("qwenmt.enabled", v);
+  },
+  get qwenmtApiKey() {
+    return get<string>("qwenmt.apiKey");
+  },
+  set qwenmtApiKey(v: string) {
+    set("qwenmt.apiKey", v);
+  },
+  get qwenmtBaseURL() {
+    return get<string>("qwenmt.baseURL");
+  },
+  set qwenmtBaseURL(v: string) {
+    set("qwenmt.baseURL", v);
+  },
+  get qwenmtModel() {
+    return get<string>("qwenmt.model");
+  },
+  set qwenmtModel(v: string) {
+    set("qwenmt.model", v);
+  },
+  get qwenmtDomains() {
+    return get<string>("qwenmt.domains");
+  },
+  set qwenmtDomains(v: string) {
+    set("qwenmt.domains", v);
   },
   get channelsOrder(): string[] {
     return mergeBuiltinChannels(getJSON<string[]>("channelsOrder"));
