@@ -32,12 +32,16 @@
 
 .ztr-select {
   /* flex-basis 0 + width 0：忽略 Gecko 原生 select 按选项文字算出的固有宽度，
-     让渠道/语言两个下拉在工具栏中等分（条目窗格另有按钮时，两框平分剩余空间）。 */
+     让渠道/语言两个下拉在工具栏中等分（条目窗格另有按钮时，两框平分剩余空间）。
+     固定 height：避免拉丁/CJK 字形度量把两个原生 select 撑成不同高度。 */
   flex: 1 1 0;
   width: 0;
   min-width: 0;
+  height: 24px;
+  min-height: 24px;
   box-sizing: border-box;
-  padding: 2px 4px;
+  padding: 0 4px;
+  line-height: 22px;
   border-radius: 4px;
   border: 1px solid var(--color-border, #ccc);
   background: var(--fill-quarternary, #fff);
