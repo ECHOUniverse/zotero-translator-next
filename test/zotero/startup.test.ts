@@ -62,13 +62,24 @@ describe("startup", function () {
   });
 
   it("文献库条目窗格不显示插件区块或侧栏图标", async function () {
-    const win = Zotero.getMainWindows()[0];
+    const win = Zotero.getMainWindows()[0] as any;
     if (!win || !win.ZoteroPane) {
       this.skip();
       return;
     }
-    const details = win.document.querySelector("item-details");
-    if (!details) {
+    // 先前阅读器用例可能留下 reader tab；断言必须只看文献库窗格
+    try {
+      win.Zotero_Tabs?.select?.("zotero-pane");
+    } catch {
+      // 忽略（测试环境不稳定的 UI 辅助操作）
+    }
+    const libraryRoot =
+      win.document.querySelector("#zotero-item-pane") ??
+      Array.from(win.document.querySelectorAll("item-details")).find(
+        (el: any) =>
+          el.tabType === "library" || el.getAttribute("tabType") === "library",
+      );
+    if (!libraryRoot) {
       this.skip();
       return;
     }
@@ -82,16 +93,25 @@ describe("startup", function () {
       return;
     }
 
-    // 等条目详情渲染一轮，确认插件没有在文献库露出
-    await new Promise((r) => setTimeout(r, 2000));
+    const details =
+      (libraryRoot.matches?.("item-details")
+        ? libraryRoot
+        : libraryRoot.querySelector("item-details")) ?? libraryRoot;
+    // selectItem 后 render 才新建 _renderPromise；先让出一轮再等，避免接到旧的已 resolve Promise
+    await new Promise((r) => setTimeout(r, 200));
+    if ((details as any)._renderPromise) {
+      await (details as any)._renderPromise;
+    } else {
+      await new Promise((r) => setTimeout(r, 1800));
+    }
 
-    const itemSection = win.document.querySelector(
+    const itemSection = libraryRoot.querySelector(
       'item-pane-custom-section[data-pane$="-translator-item"]',
     );
     assert.isNull(itemSection, "文献库不应再挂载 translator-item 区块");
 
     const readerSections = Array.from(
-      win.document.querySelectorAll(
+      libraryRoot.querySelectorAll(
         'item-pane-custom-section[data-pane$="-translator-reader"]',
       ),
     ) as HTMLElement[];
@@ -104,7 +124,7 @@ describe("startup", function () {
     }
 
     const visiblePluginChrome = Array.from(
-      win.document.querySelectorAll("[data-pane*='translator']"),
+      libraryRoot.querySelectorAll("[data-pane*='translator']"),
     ).filter((el) => {
       const node = el as HTMLElement;
       if (node.hidden) return false;
