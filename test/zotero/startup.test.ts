@@ -127,15 +127,26 @@ describe("startup", function () {
       libraryRoot.querySelectorAll("[data-pane*='translator']"),
     ).filter((el) => {
       const node = el as HTMLElement;
-      if (node.hidden) return false;
-      return node.tagName.toLowerCase() !== "item-pane-custom-section";
+      if (node.tagName.toLowerCase() === "item-pane-custom-section") {
+        return false;
+      }
+      // setEnabled 藏的是 custom-section / sidenav .pin-wrapper，
+      // 内部 collapsible-section 和 .btn 自身 hidden 仍为 false
+      if (node.closest("[hidden]")) return false;
+      if (typeof node.checkVisibility === "function") {
+        return node.checkVisibility();
+      }
+      return !node.hidden;
     });
     assert.equal(
       visiblePluginChrome.length,
       0,
-      `文献库侧栏不得显示插件图标; panes=${visiblePluginChrome
-        .map((el) => el.getAttribute("data-pane"))
-        .join(", ")}`,
+      `文献库侧栏不得显示插件图标; ${visiblePluginChrome
+        .map((el) => {
+          const node = el as HTMLElement;
+          return `${node.tagName.toLowerCase()} pane=${node.getAttribute("data-pane")} hidden=${node.hidden}`;
+        })
+        .join("; ")}`,
     );
   });
 
