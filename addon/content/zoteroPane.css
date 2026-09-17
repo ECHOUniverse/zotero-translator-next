@@ -31,8 +31,12 @@
 }
 
 .ztr-select {
-  flex: 1;
+  /* flex-basis 0 + width 0：忽略 Gecko 原生 select 按选项文字算出的固有宽度，
+     让渠道/语言两个下拉在工具栏中等分（条目窗格另有按钮时，两框平分剩余空间）。 */
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
+  box-sizing: border-box;
   padding: 2px 4px;
   border-radius: 4px;
   border: 1px solid var(--color-border, #ccc);
