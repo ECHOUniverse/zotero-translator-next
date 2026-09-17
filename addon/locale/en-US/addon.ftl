@@ -45,7 +45,6 @@ ztr-collapse = Collapse
 
 # Selection popup
 ztr-translate-selection = Translate selection
-ztr-translate-item = Translate selected item
 
 # Multi-region selection (multi-select segment translation)
 ztr-section-selection-title = Multi-region selection

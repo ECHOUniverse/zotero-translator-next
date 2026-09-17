@@ -1,5 +1,5 @@
 /**
- * 阅读器/条目面板区块：注册 + 骨架 + 渲染。
+ * 阅读器内容窗格区块：注册 + 骨架 + 渲染。
  *
  * 依据（查询文档确认，非源码推断）：
  * - 官方文档：zotero.org/support/dev/zotero_7_for_developers → Custom Item Pane Sections
@@ -54,7 +54,6 @@ import {
 } from "../constants/languages";
 
 export const READER_PANE_ID = "translator-reader";
-export const ITEM_PANE_ID = "translator-item";
 
 /** 跨区域选区在 reader 区块内的容器 id（不注册独立区块，见 Doc D3 变更） */
 const SELECTION_BLOCK_ID = "ztr-reader-selection";
@@ -122,7 +121,7 @@ export function registerSections(
   translate: TranslateManager,
   summary: SummaryManager,
   selection: SelectionManager,
-): { readerPaneID: string; itemPaneID: string } {
+): { readerPaneID: string } {
   summaryManager = summary;
   const pluginID = "zotero-translator-next@echouniverse.io";
 
@@ -189,52 +188,7 @@ export function registerSections(
     },
   });
 
-  // 条目面板区块（仅 tabType='library' 显示）
-  Zotero.ItemPaneManager.registerSection({
-    paneID: ITEM_PANE_ID,
-    pluginID,
-    header: {
-      l10nID: getLocaleID("ztr-section-item-header"),
-      icon: "chrome://zotero-translator-next/content/icons/section-16.svg",
-    },
-    sidenav: {
-      l10nID: getLocaleID("ztr-section-item-header"),
-      icon: "chrome://zotero-translator-next/content/icons/section-20.svg",
-    },
-    bodyXHTML: itemBodyXHTML(),
-    onInit: ({ body, refresh }) => {
-      initCtx(translate, {
-        paneID: ITEM_PANE_ID,
-        kind: "item",
-        body: body as HTMLDivElement,
-        refresh,
-      });
-    },
-    onItemChange: ({ body, item, tabType, setEnabled }) => {
-      setEnabled(tabType === "library");
-      const ctx = getCtx(body as HTMLDivElement);
-      if (ctx) {
-        ctx.tabType = tabType === "reader" ? "reader" : "library";
-        ctx.itemID = item?.id ?? null;
-        void refreshHistoryFor(ctx);
-      }
-    },
-    onRender: ({ body, item }) => {
-      const ctx = getCtx(body as HTMLDivElement);
-      if (!ctx) return;
-      ctx.rendered = true;
-      ctx.itemID = item?.id ?? null;
-      renderSection(translate, ctx);
-    },
-    onAsyncRender: async ({ body, item }) => {
-      const ctx = getCtx(body as HTMLDivElement);
-      if (!ctx) return;
-      ctx.itemID = item?.id ?? null;
-      await refreshHistoryFor(ctx);
-    },
-  });
-
-  return { readerPaneID: READER_PANE_ID, itemPaneID: ITEM_PANE_ID };
+  return { readerPaneID: READER_PANE_ID };
 }
 
 /** onInit：保存上下文 + 订阅任务更新（notifier 式 hook，不渲染） */
@@ -289,19 +243,6 @@ function readerBodyXHTML(): string {
   <html:div class="ztr-summary" id="ztr-reader-summary"></html:div>
   <html:div class="ztr-section-title-row" id="ztr-reader-history-title"></html:div>
   <html:div class="ztr-history" id="ztr-reader-history"></html:div>
-</html:div>`;
-}
-
-function itemBodyXHTML(): string {
-  return `
-<html:link rel="stylesheet" href="chrome://zotero-translator-next/content/zoteroPane.css"/>
-<html:div class="ztr-section" id="ztr-item-section">
-  <html:div class="ztr-toolbar" id="ztr-item-toolbar"></html:div>
-  <html:div class="ztr-section-title-row" id="ztr-item-current-title"></html:div>
-  <html:div class="ztr-result" id="ztr-item-result"></html:div>
-  <html:div class="ztr-summary" id="ztr-item-summary"></html:div>
-  <html:div class="ztr-section-title-row" id="ztr-item-history-title"></html:div>
-  <html:div class="ztr-history" id="ztr-item-history"></html:div>
 </html:div>`;
 }
 
@@ -678,36 +619,6 @@ function buildToolbar(
     prefs.targetLang = langSelect.value;
   });
   toolbar.append(langSelect);
-
-  // 条目区块：翻译选中条目按钮
-  if (ctx.kind === "item") {
-    const btn = el(doc, "button");
-    btn.className = "ztr-btn";
-    btn.textContent = getString("ztr-translate-item");
-    btn.addEventListener("click", () => {
-      const item = getSelectedItem();
-      if (!item) return;
-      void translateManager?.translate({
-        sourceText:
-          item.getField("abstractNote") || item.getField("title") || "",
-        context: item.getField("abstractNote")
-          ? item.getField("title")
-          : undefined,
-        itemID: item.id,
-        channelId: getSelectedChannelId(),
-      });
-    });
-    toolbar.append(btn);
-  }
-}
-
-function getSelectedItem(): Zotero.Item | null {
-  try {
-    const pane = Zotero.getActiveZoteroPane();
-    return pane?.getSelectedItems?.()[0] ?? null;
-  } catch {
-    return null;
-  }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import { renderContent } from "../../src/utils/renderContent";
+import { closeReaderTab, openTestReader } from "./helpers/open-reader";
 
 /**
  * 布局回归：在真实区块 body 中构造与 renderHistoryList 完全同构的历史条目 DOM
@@ -147,75 +148,71 @@ describe("layout: history preview full-wrap (direct DOM)", function () {
       return;
     }
 
-    // 1. 选中条目 → 区块挂载（复用真实渲染链）
-    const item = new Zotero.Item("journalArticle");
-    item.setField("title", TITLE);
-    await item.saveTx();
-    win.ZoteroPane.selectItem(item.id);
-
-    const deadline = Date.now() + 15000;
-    let body: any = null;
-    while (Date.now() < deadline) {
-      const section = win.document.querySelector(
-        'item-pane-custom-section[data-pane$="-translator-item"]',
+    let reader: any = null;
+    try {
+      const opened = await openTestReader(win, TITLE);
+      reader = opened.reader;
+      const body = opened.section.querySelector(
+        '[data-type="body"] .ztr-toolbar',
       );
-      body = section?.querySelector('[data-type="body"] .ztr-toolbar');
-      if (body) break;
+      assert.ok(body, "区块工具栏应已渲染");
+
+      const bucket = body!.closest(".ztr-section") as HTMLElement;
+      const { preview, item: histItem } = await buildPreview(win, bucket);
+
+      // A. 关键序列复现：把区块正文压到真实窄车道（356px，贴近真实窄窗格 min）。
+      //    窗格在 harness 中 width 被 flex 撑开，window.resizeTo 也压不窄，
+      //    故直接用 section/body 内联宽度模拟窄车道。
+      const sectionEl: any = bucket.closest("item-pane-custom-section");
+      const bodyEl: any = sectionEl?.querySelector('[data-type="body"]');
+      const origBodyStyle = bodyEl?.getAttribute("style") ?? "";
+      if (bodyEl) bodyEl.style.width = "356px";
+      if (sectionEl) sectionEl.style.width = "356px";
       await new Promise((r) => setTimeout(r, 400));
+
+      // 窄车道先折叠再展开：触发 clamp 切换 + 线位重排（-webkit-box 空洞在此条件出现）
+      histItem.classList.remove("expanded");
+      await new Promise((r) => setTimeout(r, 300));
+      histItem.classList.add("expanded");
+      await new Promise((r) => setTimeout(r, 400));
+      const afterExpand = measure(preview);
+
+      const pane = sectionEl?.closest("context-pane, item-pane") as
+        | HTMLElement
+        | undefined;
+      const paneW = {
+        paneClientW: pane?.clientWidth ?? -1,
+        bodyClientW: bucket.clientWidth,
+        winW: win.document.documentElement.clientWidth,
+        metaZoom: win.devicePixelRatio,
+      };
+      // 恢复
+      if (bodyEl) bodyEl.setAttribute("style", origBodyStyle);
+      if (sectionEl) sectionEl.style.width = "";
+
+      const fail =
+        "afterExpand=" +
+        JSON.stringify(afterExpand) +
+        "\nsizes=" +
+        JSON.stringify(paneW) +
+        "\ntextLen=" +
+        preview.textContent.length;
+
+      // 主断言：展开态（窄车道）下全文不能有「空洞」——即每个自然段中间片段必须都有布局矩形。
+      // 若 contain:inline-size 隔离被移除，窄车道下文本会被裁/产生空洞，此处即红灯。
+      assert.ok(
+        afterExpand.holes.length === 0,
+        "展开态窄车道全文不得有布局空洞: " + fail,
+      );
+      // 关键中段（P2 第 2 句）必须已绘制
+      assert.ok(
+        afterExpand.anchors.some((a: string) =>
+          a.startsWith("计算值一般来说与实验:OK"),
+        ),
+        "P2 中段应已绘制: " + fail,
+      );
+    } finally {
+      closeReaderTab(win, reader);
     }
-    assert.ok(body, "区块工具栏应已渲染");
-
-    const bucket = body.closest(".ztr-section");
-    const { preview, item: histItem } = await buildPreview(win, bucket);
-
-    // A. 关键序列复现：把区块正文压到真实窄车道（356px，贴近真实窄窗格/item-pane min）。
-    //    item-pane 在 harness 中 width 被 flex 撑开，window.resizeTo 也压不窄，
-    //    故直接用 section/body 内联宽度模拟窄车道。
-    const sectionEl: any = bucket.closest("item-pane-custom-section");
-    const bodyEl: any = sectionEl?.querySelector('[data-type="body"]');
-    const origBodyStyle = bodyEl?.getAttribute("style") ?? "";
-    if (bodyEl) bodyEl.style.width = "356px";
-    if (sectionEl) sectionEl.style.width = "356px";
-    await new Promise((r) => setTimeout(r, 400));
-
-    // 窄车道先折叠再展开：触发 clamp 切换 + 线位重排（-webkit-box 空洞在此条件出现）
-    histItem.classList.remove("expanded");
-    await new Promise((r) => setTimeout(r, 300));
-    histItem.classList.add("expanded");
-    await new Promise((r) => setTimeout(r, 400));
-    const afterExpand = measure(preview);
-
-    const paneW = {
-      paneClientW:
-        (win.document.querySelector("item-pane") as any)?.clientWidth ?? -1,
-      bodyClientW: bucket.clientWidth,
-      winW: win.document.documentElement.clientWidth,
-      metaZoom: win.devicePixelRatio,
-    };
-    // 恢复
-    if (bodyEl) bodyEl.setAttribute("style", origBodyStyle);
-    if (sectionEl) sectionEl.style.width = "";
-
-    const fail =
-      "afterExpand=" +
-      JSON.stringify(afterExpand) +
-      "\nsizes=" +
-      JSON.stringify(paneW) +
-      "\ntextLen=" +
-      preview.textContent.length;
-
-    // 主断言：展开态（窄车道）下全文不能有「空洞」——即每个自然段中间片段必须都有布局矩形。
-    // 若 contain:inline-size 隔离被移除，窄车道下文本会被裁/产生空洞，此处即红灯。
-    assert.ok(
-      afterExpand.holes.length === 0,
-      "展开态窄车道全文不得有布局空洞: " + fail,
-    );
-    // 关键中段（P2 第 2 句）必须已绘制
-    assert.ok(
-      afterExpand.anchors.some((a: string) =>
-        a.startsWith("计算值一般来说与实验:OK"),
-      ),
-      "P2 中段应已绘制: " + fail,
-    );
   });
 });

@@ -5,5 +5,3 @@
 
 ztr-section-reader-header =
     .label = 翻译
-ztr-section-item-header =
-    .label = 翻译

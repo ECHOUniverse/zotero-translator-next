@@ -22,14 +22,10 @@ async function onStartup() {
   // 偏好面板（官方 API；await 以捕获 paneID，供"打开设置"直达）
   await registerPreferencePane();
 
-  // 区块（阅读器侧栏 + 条目面板 + 跨区域选区）
+  // 区块（阅读器内容窗格 + 跨区域选区）
   const { translate, summary, reader, selection } = addon.data;
-  const { readerPaneID, itemPaneID } = registerSections(
-    translate,
-    summary,
-    selection,
-  );
-  (addon.data as any).sectionKeys = { readerPaneID, itemPaneID };
+  const { readerPaneID } = registerSections(translate, summary, selection);
+  (addon.data as any).sectionKeys = { readerPaneID };
 
   // 阅读器划选弹层 + 快捷键
   reader.registerSelectionPopup();

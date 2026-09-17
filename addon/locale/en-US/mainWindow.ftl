@@ -5,5 +5,3 @@
 
 ztr-section-reader-header =
     .label = Translate
-ztr-section-item-header =
-    .label = Translate

@@ -89,20 +89,17 @@
   background: var(--fill-tertiary, #f0f0f0);
 }
 
-/* 翻译历史标题行：按钮紧跟标题左侧，避免贴右缘被 item-pane 滚动条遮挡 */
-#ztr-item-history-title,
+/* 翻译历史标题行：按钮紧跟标题左侧，避免贴右缘被滚动条遮挡 */
 #ztr-reader-history-title {
   justify-content: flex-start;
   gap: 8px;
   padding-right: 0;
 }
 
-#ztr-item-history-title .ztr-section-title-text,
 #ztr-reader-history-title .ztr-section-title-text {
   flex: 0 1 auto;
 }
 
-#ztr-item-history-title .ztr-history-tools,
 #ztr-reader-history-title .ztr-history-tools {
   flex: 0 0 auto;
   margin-left: 0;

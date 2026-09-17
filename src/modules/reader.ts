@@ -197,16 +197,9 @@ export class ReaderModule {
     this.onSummarize?.(task, this.currentPaneKind());
   }
 
-  /** 当前窗格类型：阅读器 tab → 阅读器窗格；主窗口 → 条目窗格 */
+  /** 当前窗格类型：插件只在阅读器内容窗格渲染 */
   private currentPaneKind(): "reader" | "item" {
-    try {
-      const win = Zotero.getMainWindows()[0] as any;
-      const tabID = win?.Zotero_Tabs?.selectedID;
-      if (tabID && Zotero.Reader.getByTabID(tabID)) return "reader";
-    } catch {
-      // 忽略，回落条目窗格
-    }
-    return "item";
+    return "reader";
   }
 
   /** 当前阅读器实例（弹层/区块跳页复用；无阅读器 tab 时 undefined） */

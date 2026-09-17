@@ -45,7 +45,6 @@ ztr-collapse = 收起
 
 # 划选弹层
 ztr-translate-selection = 翻译选中内容
-ztr-translate-item = 翻译选中条目
 
 # 跨区域选区（多选拼段翻译）
 ztr-section-selection-title = 跨区域选区
